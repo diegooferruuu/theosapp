@@ -38,18 +38,55 @@ Sin token, la app funciona igual y los mensajes se escriben en el log del backen
 
 **Cómo se envían las alertas.** Cada 15 minutos el backend revisa vencimientos y, a partir de `DAILY_ALERT_HOUR`, envía un único resumen con todo lo pendiente. Cada aviso se registra en `notification_logs`, así que nunca se repite aunque el servidor se reinicie, y si el servidor estuvo apagado a la hora del aviso, se envía en la siguiente revisión. Las tomas de medicamentos se revisan cada minuto. Si una vacuna se *renueva* (nuevo registro del mismo producto), la anterior deja de generar avisos.
 
-## Producción (Docker Compose, p. ej. Oracle Linux)
+## Producción
+
+### Servidor actual (Oracle Cloud, Ubuntu ARM)
+
+```
+~/theosapp/
+├── .env          configuración y secretos de producción (no está en git)
+├── deploy.sh     script de despliegue (copia de scripts/server-deploy.sh)
+├── app/          versión desplegada
+├── app.old/      versión anterior (para volver atrás)
+└── deploy.log    historial de despliegues
+```
+
+- Proyecto Compose `theosapp`, con red y volumen propios. Convive con los otros proyectos del servidor sin compartir nada.
+- El único puerto publicado es `HTTP_PORT` (18473). La base de datos no se expone.
+- En OCI hay que permitir ese puerto en la *Security List* de la VCN: regla de ingreso TCP 18473 desde `0.0.0.0/0`.
+
+### Despliegue automático (GitHub Actions)
+
+Cada push a `main` ejecuta tests, tipos y lint. Si pasan, el workflow envía el código al servidor por SSH y `deploy.sh` reconstruye el stack. Si la API no responde, vuelve a la versión anterior. También se puede lanzar a mano desde *Actions → Deploy → Run workflow*.
+
+Configuración en *Settings → Secrets and variables → Actions*:
+
+| Tipo | Nombre | Valor |
+|---|---|---|
+| Secret | `DEPLOY_SSH_KEY` | clave privada de deploy (`~/.ssh/theosapp_deploy` en tu Mac) |
+| Variable | `DEPLOY_HOST` | IP del servidor |
+| Variable | `DEPLOY_USER` | `ubuntu` |
+| Variable | `DEPLOY_KNOWN_HOSTS` | línea de `ssh-keyscan -t ed25519 <IP>` |
+
+La clave de deploy está registrada en el servidor con `restrict,command="…/deploy.sh"`: solo puede ejecutar el despliegue, sin shell ni túneles.
+
+Despliegue manual desde tu Mac (mismo mecanismo):
+
+```bash
+git archive --format=tar.gz HEAD | ssh oracle '~/theosapp/deploy.sh'
+```
+
+### Otro servidor
 
 ```bash
 ./scripts/init-env.sh        # crea .env con secretos aleatorios
-nano .env                    # APP_URL, TELEGRAM_BOT_TOKEN, COOKIE_SECURE…
+nano .env                    # HTTP_PORT, APP_URL, TELEGRAM_BOT_TOKEN, COOKIE_SECURE…
 docker compose up -d --build
 ```
 
-- La app queda en `http://<servidor>:${HTTP_PORT}`. Las migraciones se aplican solas al arrancar el backend.
-- **HTTPS:** para instalar la PWA en el iPhone y usar cookies seguras hace falta HTTPS. Pon un certificado delante de Nginx (certbot en el host, Cloudflare Tunnel, Caddy…) y define `COOKIE_SECURE=true` y `APP_URL=https://…`.
-- En Oracle Linux recuerda abrir el puerto en `firewalld` y en la *Security List* de OCI.
-- Copia de seguridad de la base: `docker compose exec db pg_dump -U theo theosapp > backup.sql`
+- Las migraciones se aplican solas al arrancar el backend.
+- **HTTPS:** para instalar la PWA en el iPhone y usar cookies seguras hace falta HTTPS. Pon un certificado delante de Nginx (Caddy, certbot, Cloudflare Tunnel…) y define `COOKIE_SECURE=true` y `APP_URL=https://…`.
+- Copia de seguridad de la base: `docker compose -p theosapp exec db pg_dump -U theo theosapp > backup.sql`
 
 ## Desarrollo local
 

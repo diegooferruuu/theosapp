@@ -1,10 +1,11 @@
 import { appTimezone } from '../common/config.js';
 import {
+  daysBetween,
+  formatDateTime,
   formatTime,
   relativeDays,
   todayIn,
   toDateOnly,
-  daysBetween,
 } from '../common/dates.js';
 import { HEALTH_TYPE_LABEL } from '../common/labels.js';
 import type { UpcomingItem } from '../dashboard/dashboard.service.js';
@@ -242,6 +243,79 @@ export function healthGivenMessage(r: {
     body: `${HEALTH_TYPE_LABEL[r.type] ?? 'Registro'} aplicada ${cuando}. La registró ${r.givenBy}.`,
     url: '/vacunas',
     tag: `salud-${r.petId}-${r.type}`,
+    ttl: 12 * 3600,
+  };
+}
+
+interface AppointmentInfo {
+  id: number;
+  scheduledAt: Date;
+  reason: string;
+  vetName?: string | null;
+  location?: string | null;
+  notes?: string | null;
+  pet: { name: string };
+}
+
+function appointmentLine(a: AppointmentInfo, tz: string) {
+  return [a.reason, formatTime(a.scheduledAt, tz), a.vetName, a.location]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** Aviso a los demás al agendar una cita. */
+export function appointmentCreatedMessage(
+  a: AppointmentInfo & { createdBy: string },
+): AppNotification {
+  const tz = appTimezone();
+  return {
+    title: `📅 Cita para ${a.pet.name}: ${formatDateTime(a.scheduledAt, tz)}`,
+    body: `${[a.reason, a.vetName, a.location].filter(Boolean).join(' · ')}\nLa agendó ${a.createdBy}.`,
+    url: `/visitas?cita=${a.id}`,
+    tag: `cita-${a.id}`,
+    ttl: 24 * 3600,
+  };
+}
+
+/** Recordatorios de una cita: el día anterior, 2 h antes y después (registrar resultado). */
+export function appointmentReminderMessage(
+  a: AppointmentInfo,
+  bucket: 'day' | 'soon' | 'after',
+  symptomCount = 0,
+): AppNotification {
+  const tz = appTimezone();
+  const prep = a.notes ? `Recuerda: ${a.notes}` : null;
+  if (bucket === 'after') {
+    return {
+      title: `🩺 ¿Cómo fue la cita de ${a.pet.name}?`,
+      body: `${a.reason}. Registra el diagnóstico, el peso y si le recetaron algo.`,
+      url: `/visitas?cita=${a.id}`,
+      tag: `cita-${a.id}`,
+      ttl: 24 * 3600,
+    };
+  }
+  const symptoms =
+    symptomCount > 0
+      ? `Hay ${symptomCount} ${symptomCount === 1 ? 'síntoma anotado' : 'síntomas anotados'} desde la última visita; lleva el historial en PDF.`
+      : null;
+  if (bucket === 'soon') {
+    return {
+      title: `⏰ En menos de 2 horas: cita de ${a.pet.name}`,
+      body: [appointmentLine(a, tz), prep, symptoms].filter(Boolean).join('\n'),
+      url: `/visitas?cita=${a.id}`,
+      tag: `cita-${a.id}`,
+      ttl: 2 * 3600,
+      urgency: 'high',
+    };
+  }
+  const tomorrow = daysBetween(todayIn(tz), todayIn(tz, a.scheduledAt)) === 1;
+  return {
+    title: tomorrow
+      ? `📅 Mañana: cita de ${a.pet.name} con el veterinario`
+      : `📅 Cita de ${a.pet.name}: ${formatDateTime(a.scheduledAt, tz)}`,
+    body: [appointmentLine(a, tz), prep, symptoms].filter(Boolean).join('\n'),
+    url: `/visitas?cita=${a.id}`,
+    tag: `cita-${a.id}`,
     ttl: 12 * 3600,
   };
 }

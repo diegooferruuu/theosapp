@@ -191,6 +191,8 @@ export interface Dashboard {
   upcoming: UpcomingItem[];
   activeTreatments: Treatment[];
   lastVisits: VetVisit[];
+  nextAppointments: VetAppointment[];
+  pendingAppointments: VetAppointment[];
 }
 
 export type SymptomCategory =
@@ -221,4 +223,23 @@ export interface SymptomLog {
   pet: PetRef;
   createdBy: PetRef | null;
   photos: { id: number }[];
+}
+
+export type AppointmentStatus = "SCHEDULED" | "COMPLETED" | "CANCELLED";
+
+export interface VetAppointment {
+  id: number;
+  petId: number;
+  scheduledAt: string;
+  reason: string;
+  vetName: string | null;
+  location: string | null;
+  notes: string | null;
+  status: AppointmentStatus;
+  visitId: number | null;
+  pet: PetRef;
+  createdBy?: PetRef | null;
+  visit?: { id: number; date: string; diagnosis: string | null } | null;
+  /** Preparación (solo citas programadas). */
+  prep?: { lastVisitDate: string | null; symptomCount: number } | null;
 }

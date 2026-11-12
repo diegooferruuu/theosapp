@@ -12,9 +12,11 @@ import {
   totalDoses,
 } from '../treatments/schedule.js';
 import { TreatmentsService } from '../treatments/treatments.service.js';
+import { appointmentBucket } from '../appointments/reminders.js';
 import { groomingBucket, healthBucket } from './alerts.js';
 import { NotifierService } from '../notifier/notifier.service.js';
 import {
+  appointmentReminderMessage,
   doseMessage,
   pendingDoseMessage,
   treatmentFinishedMessage,
@@ -30,6 +32,7 @@ export class NotificationsService implements OnApplicationBootstrap {
   private readonly logger = new Logger('Notificaciones');
   private dailyRunning = false;
   private dosesRunning = false;
+  private appointmentsRunning = false;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -193,6 +196,56 @@ export class NotificationsService implements OnApplicationBootstrap {
       this.logger.error(`Error revisando tomas: ${(e as Error).message}`);
     } finally {
       this.dosesRunning = false;
+    }
+  }
+
+  /** Citas con el veterinario: el día anterior, 2 h antes y después (registrar resultado). */
+  @Cron('0 */5 * * * *', { name: 'vet-appointments' })
+  async appointmentsTick() {
+    if (this.appointmentsRunning) return;
+    this.appointmentsRunning = true;
+    try {
+      const now = new Date();
+      const appointments = await this.prisma.vetAppointment.findMany({
+        where: {
+          status: 'SCHEDULED',
+          scheduledAt: {
+            gte: new Date(now.getTime() - 48 * 3_600_000),
+            lte: new Date(now.getTime() + 24 * 3_600_000),
+          },
+        },
+        include: { pet: { select: { name: true } } },
+      });
+      for (const a of appointments) {
+        const bucket = appointmentBucket(a.scheduledAt, now);
+        if (!bucket) continue;
+        const key = `appt:${a.id}:${a.scheduledAt.getTime()}:${bucket}`;
+        if (await this.wasSent(key)) continue;
+        let symptomCount = 0;
+        if (bucket !== 'after') {
+          const lastVisit = await this.prisma.vetVisit.findFirst({
+            where: { petId: a.petId, date: { lte: a.scheduledAt } },
+            orderBy: { date: 'desc' },
+            select: { date: true },
+          });
+          symptomCount = await this.prisma.symptomLog.count({
+            where: {
+              petId: a.petId,
+              ...(lastVisit && { occurredAt: { gt: lastVisit.date } }),
+            },
+          });
+        }
+        const message = appointmentReminderMessage(a, bucket, symptomCount);
+        await this.markSent(
+          [key],
+          message.body,
+          await this.notifier.broadcast(message),
+        );
+      }
+    } catch (e) {
+      this.logger.error(`Error revisando citas: ${(e as Error).message}`);
+    } finally {
+      this.appointmentsRunning = false;
     }
   }
 

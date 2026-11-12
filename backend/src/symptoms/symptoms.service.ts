@@ -51,9 +51,11 @@ export class SymptomsService {
     return this.prisma.symptomLog.findMany({
       where: {
         petId: query.petId,
-        occurredAt: query.days
-          ? { gte: new Date(Date.now() - query.days * 86_400_000) }
-          : undefined,
+        occurredAt: query.since
+          ? { gt: new Date(query.since) }
+          : query.days
+            ? { gte: new Date(Date.now() - query.days * 86_400_000) }
+            : undefined,
       },
       include,
       orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],

@@ -39,6 +39,7 @@ model User {
   pushSubscriptions PushSubscription[]
   dosesGiven        MedicationDose[]
   symptoms          SymptomLog[]
+  appointments      VetAppointment[]
 
   @@map("users")
 }
@@ -63,6 +64,7 @@ model Pet {
   vetVisits     VetVisit[]
   weights       WeightRecord[]
   symptoms      SymptomLog[]
+  appointments  VetAppointment[]
 
   @@map("pets")
 }
@@ -243,9 +245,11 @@ model VetVisit {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  pet          Pet           @relation(fields: [petId], references: [id], onDelete: Cascade)
-  createdBy    User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  pet          Pet             @relation(fields: [petId], references: [id], onDelete: Cascade)
+  createdBy    User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
   weightRecord WeightRecord?
+  /// Cita de la que salió esta visita (si se agendó antes).
+  appointment  VetAppointment?
 
   @@index([petId])
   @@map("vet_visits")
@@ -364,4 +368,37 @@ model SymptomPhoto {
 
   @@index([symptomId])
   @@map("symptom_photos")
+}
+
+// ───────────────────────── Citas con el veterinario ─────────────────────────
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model VetAppointment {
+  id          Int               @id @default(autoincrement())
+  petId       Int               @map("pet_id")
+  scheduledAt DateTime          @map("scheduled_at")
+  reason      String
+  vetName     String?           @map("vet_name")
+  location    String?
+  /// Preparación: "ir en ayunas", "llevar muestra de heces"…
+  notes       String?
+  status      AppointmentStatus @default(SCHEDULED)
+  /// Visita registrada al terminar la cita.
+  visitId     Int?              @unique @map("visit_id")
+  createdById Int?              @map("created_by_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  pet       Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  visit     VetVisit? @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([petId, scheduledAt])
+  @@index([status, scheduledAt])
+  @@map("vet_appointments")
 }

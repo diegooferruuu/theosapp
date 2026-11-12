@@ -59,6 +59,11 @@ export class SymptomQueryDto {
   @OptionalQueryId()
   petId?: number;
 
+  /** Solo los posteriores a esta fecha (ISO). */
+  @IsOptional()
+  @IsISO8601()
+  since?: string;
+
   /** Solo los últimos N días. */
   @IsOptional()
   @Type(() => Number)

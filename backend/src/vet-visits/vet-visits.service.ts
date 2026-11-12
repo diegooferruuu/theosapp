@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { parseDateOnly } from '../common/dates.js';
 import { refreshPetWeight } from '../pets/pet-weight.js';
 import { PetsService } from '../pets/pets.service.js';
@@ -31,22 +35,44 @@ export class VetVisitsService {
 
   async create(dto: CreateVetVisitDto, userId: number) {
     await this.pets.ensureExists(dto.petId);
+    if (dto.appointmentId) {
+      const appointment = await this.prisma.vetAppointment.findUnique({
+        where: { id: dto.appointmentId },
+      });
+      if (!appointment || appointment.petId !== dto.petId) {
+        throw new BadRequestException('La cita no corresponde a esta mascota');
+      }
+      if (appointment.status !== 'SCHEDULED') {
+        throw new BadRequestException(
+          'Esa cita ya tiene su resultado registrado o fue cancelada',
+        );
+      }
+    }
     const date = parseDateOnly(dto.date);
-    const visit = await this.prisma.vetVisit.create({
-      data: {
-        petId: dto.petId,
-        date,
-        reason: dto.reason,
-        diagnosis: dto.diagnosis ?? null,
-        vetName: dto.vetName ?? null,
-        weightKg: dto.weightKg ?? null,
-        notes: dto.notes ?? null,
-        createdById: userId,
-        weightRecord: dto.weightKg
-          ? { create: { petId: dto.petId, date, weightKg: dto.weightKg } }
-          : undefined,
-      },
-      include,
+    const visit = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.vetVisit.create({
+        data: {
+          petId: dto.petId,
+          date,
+          reason: dto.reason,
+          diagnosis: dto.diagnosis ?? null,
+          vetName: dto.vetName ?? null,
+          weightKg: dto.weightKg ?? null,
+          notes: dto.notes ?? null,
+          createdById: userId,
+          weightRecord: dto.weightKg
+            ? { create: { petId: dto.petId, date, weightKg: dto.weightKg } }
+            : undefined,
+        },
+        include,
+      });
+      if (dto.appointmentId) {
+        await tx.vetAppointment.update({
+          where: { id: dto.appointmentId },
+          data: { status: 'COMPLETED', visitId: created.id },
+        });
+      }
+      return created;
     });
     if (dto.weightKg) await refreshPetWeight(this.prisma, dto.petId);
     return visit;

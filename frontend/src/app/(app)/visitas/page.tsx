@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import useSWR from "swr";
+import { AppointmentsSection } from "@/components/appointments-section";
 import { PetFilter, PetSelect } from "@/components/pet-filter";
+import { newTreatmentForm, TreatmentForm } from "@/components/treatment-form";
 import {
   Button,
   Card,
@@ -24,12 +27,13 @@ import {
 } from "@/components/ui";
 import { WeightSection } from "@/components/weight-section";
 import { api, fetcher } from "@/lib/api";
-import { dateOnly, kg, todayLocal } from "@/lib/format";
+import { dateOnly, formatDate, kg, toLocalDateInput, todayLocal } from "@/lib/format";
 import { qs, usePets } from "@/lib/hooks";
-import type { VetVisit } from "@/lib/types";
+import type { VetAppointment, VetVisit } from "@/lib/types";
 
 interface FormState {
   id?: number;
+  appointmentId?: number;
   petId: number | "";
   date: string;
   reason: string;
@@ -39,12 +43,41 @@ interface FormState {
   notes: string;
 }
 
+type Tab = "citas" | "visitas" | "peso";
+
 export default function VisitasPage() {
+  return (
+    <Suspense>
+      <Veterinario />
+    </Suspense>
+  );
+}
+
+function Veterinario() {
+  const params = useSearchParams();
+  const highlightId = Number(params.get("cita")) || null;
   const { data: pets } = usePets();
   const [petId, setPetId] = useState<number | null>(null);
-  const [tab, setTab] = useState<"visitas" | "peso">("visitas");
+  const [tab, setTab] = useState<Tab>(() =>
+    highlightId || params.get("tab") === "citas" ? "citas" : params.get("tab") === "peso" ? "peso" : "visitas",
+  );
   const [form, setForm] = useState<FormState | null>(null);
+  const [prescription, setPrescription] = useState<{ petId: number; note: string } | null>(null);
+  const [treatmentForm, setTreatmentForm] = useState<ReturnType<typeof newTreatmentForm> | null>(null);
   const { data, error, mutate } = useSWR<VetVisit[]>(`/vet-visits${qs({ petId })}`, fetcher);
+
+  /** Registrar el resultado de una cita: abre la visita con los datos de la cita. */
+  const registerResult = (a: VetAppointment) =>
+    setForm({
+      appointmentId: a.id,
+      petId: a.petId,
+      date: toLocalDateInput(new Date(a.scheduledAt)),
+      reason: a.reason,
+      diagnosis: "",
+      vetName: a.vetName ?? "",
+      weightKg: "",
+      notes: "",
+    });
 
   async function remove(v: VetVisit) {
     if (!confirm(`¿Eliminar la visita "${v.reason}" de ${v.pet.name}?`)) return;
@@ -59,8 +92,8 @@ export default function VisitasPage() {
   return (
     <>
       <PageHeader
-        title="Visitas y peso"
-        description="Historial médico y evolución del peso."
+        title="Veterinario"
+        description="Citas, visitas y evolución del peso."
         action={
           tab === "visitas" && (
             <Button
@@ -85,6 +118,7 @@ export default function VisitasPage() {
       <div className="mb-4 inline-flex rounded-xl border border-line bg-surface p-1">
         {(
           [
+            ["citas", "📅 Citas"],
             ["visitas", "🩺 Visitas"],
             ["peso", "⚖️ Peso"],
           ] as const
@@ -102,7 +136,9 @@ export default function VisitasPage() {
         ))}
       </div>
 
-      {tab === "peso" ? (
+      {tab === "citas" ? (
+        <AppointmentsSection pets={pets} petId={petId} highlightId={highlightId} onRegisterResult={registerResult} />
+      ) : tab === "peso" ? (
         <WeightSection pets={pets} petId={petId} />
       ) : (
         <>
@@ -176,9 +212,46 @@ export default function VisitasPage() {
           pets={pets}
           onClose={() => setForm(null)}
           onSaved={async () => {
+            const fromAppointment = form.appointmentId ? form : null;
             setForm(null);
             await mutate();
+            if (fromAppointment && fromAppointment.petId) {
+              setPrescription({
+                petId: fromAppointment.petId,
+                note: `Recetado en la visita del ${formatDate(fromAppointment.date)}: ${fromAppointment.reason}`,
+              });
+            }
           }}
+        />
+      )}
+
+      {prescription && (
+        <Modal open title="Cita registrada ✓" onClose={() => setPrescription(null)}>
+          <div className="flex flex-col gap-4">
+            <p className="text-sm">¿Le recetaron algún medicamento, gotas o limpieza?</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={() => setPrescription(null)}>
+                No, listo
+              </Button>
+              <Button
+                onClick={() => {
+                  setTreatmentForm({ ...newTreatmentForm(prescription.petId), notes: prescription.note });
+                  setPrescription(null);
+                }}
+              >
+                💊 Crear tratamiento
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {treatmentForm && (
+        <TreatmentForm
+          initial={treatmentForm}
+          pets={pets}
+          onClose={() => setTreatmentForm(null)}
+          onSaved={() => setTreatmentForm(null)}
         />
       )}
     </>
@@ -209,6 +282,7 @@ function VisitForm({
       await api(f.id ? `/vet-visits/${f.id}` : "/vet-visits", {
         method: f.id ? "PATCH" : "POST",
         body: {
+          appointmentId: f.id ? undefined : f.appointmentId,
           petId: f.petId,
           date: f.date,
           reason: f.reason,
@@ -226,7 +300,11 @@ function VisitForm({
   }
 
   return (
-    <Modal open title={f.id ? "Editar visita" : "Nueva visita al veterinario"} onClose={onClose}>
+    <Modal
+      open
+      title={f.id ? "Editar visita" : f.appointmentId ? "Resultado de la cita" : "Nueva visita al veterinario"}
+      onClose={onClose}
+    >
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Mascota">

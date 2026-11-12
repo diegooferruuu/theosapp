@@ -101,39 +101,50 @@ export class ReportsService {
       : null;
     const tz = appTimezone();
 
-    const [health, treatments, visits, symptoms, weights, grooming] =
-      await Promise.all([
-        this.prisma.healthRecord.findMany({
-          where: { petId, ...(since && { dateGiven: { gte: since } }) },
-          include: { createdBy: { select: { name: true } } },
-          orderBy: { dateGiven: 'desc' },
-        }),
-        this.prisma.medicationTreatment.findMany({
-          where: { petId },
-          include: { _count: { select: { doses: true } } },
-          orderBy: { startAt: 'desc' },
-        }),
-        this.prisma.vetVisit.findMany({
-          where: { petId, ...(since && { date: { gte: since } }) },
-          orderBy: { date: 'desc' },
-        }),
-        this.prisma.symptomLog.findMany({
-          where: { petId, ...(since && { occurredAt: { gte: since } }) },
-          include: {
-            createdBy: { select: { name: true } },
-            _count: { select: { photos: true } },
-          },
-          orderBy: { occurredAt: 'desc' },
-        }),
-        this.prisma.weightRecord.findMany({
-          where: { petId, ...(since && { date: { gte: since } }) },
-          orderBy: { date: 'asc' },
-        }),
-        this.prisma.groomingLog.findMany({
-          where: { petId, ...(since && { dateDone: { gte: since } }) },
-          orderBy: { dateDone: 'desc' },
-        }),
-      ]);
+    const [
+      health,
+      treatments,
+      visits,
+      symptoms,
+      weights,
+      grooming,
+      appointments,
+    ] = await Promise.all([
+      this.prisma.healthRecord.findMany({
+        where: { petId, ...(since && { dateGiven: { gte: since } }) },
+        include: { createdBy: { select: { name: true } } },
+        orderBy: { dateGiven: 'desc' },
+      }),
+      this.prisma.medicationTreatment.findMany({
+        where: { petId },
+        include: { _count: { select: { doses: true } } },
+        orderBy: { startAt: 'desc' },
+      }),
+      this.prisma.vetVisit.findMany({
+        where: { petId, ...(since && { date: { gte: since } }) },
+        orderBy: { date: 'desc' },
+      }),
+      this.prisma.symptomLog.findMany({
+        where: { petId, ...(since && { occurredAt: { gte: since } }) },
+        include: {
+          createdBy: { select: { name: true } },
+          _count: { select: { photos: true } },
+        },
+        orderBy: { occurredAt: 'desc' },
+      }),
+      this.prisma.weightRecord.findMany({
+        where: { petId, ...(since && { date: { gte: since } }) },
+        orderBy: { date: 'asc' },
+      }),
+      this.prisma.groomingLog.findMany({
+        where: { petId, ...(since && { dateDone: { gte: since } }) },
+        orderBy: { dateDone: 'desc' },
+      }),
+      this.prisma.vetAppointment.findMany({
+        where: { petId, status: 'SCHEDULED', scheduledAt: { gte: new Date() } },
+        orderBy: { scheduledAt: 'asc' },
+      }),
+    ]);
     // Tratamientos que tocan el período: activos, o que empezaron/terminaron dentro.
     const inPeriod = treatments.filter((t) => {
       if (!since || t.status === 'ACTIVE') return true;
@@ -199,6 +210,26 @@ export class ReportsService {
         .fontSize(9)
         .fillColor(COLORS.text)
         .text(`Notas: ${pet.notes}`, MARGIN, doc.y, { width: pageWidth(doc) });
+    }
+
+    // ─── Próximas citas ───
+    if (appointments.length) {
+      sectionTitle(doc, 'Próximas citas');
+      table(
+        doc,
+        [
+          { header: 'Fecha y hora', width: 1.5 },
+          { header: 'Motivo', width: 2 },
+          { header: 'Veterinario / lugar', width: 1.7 },
+          { header: 'Indicaciones', width: 2.2 },
+        ],
+        appointments.map((a) => [
+          formatDateTime(a.scheduledAt, tz),
+          a.reason,
+          [a.vetName, a.location].filter(Boolean).join('\n'),
+          a.notes ?? '',
+        ]),
+      );
     }
 
     // ─── Vacunas y desparasitaciones ───

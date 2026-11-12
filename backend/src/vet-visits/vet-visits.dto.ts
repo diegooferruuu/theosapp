@@ -17,6 +17,12 @@ export class CreateVetVisitDto {
   @Min(1)
   petId: number;
 
+  /** Cita de la que sale esta visita (se marca como completada). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  appointmentId?: number;
+
   @IsDateOnly()
   date: string;
 

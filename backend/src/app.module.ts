@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { AppointmentsModule } from './appointments/appointments.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { BootstrapService } from './bootstrap/bootstrap.service.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
@@ -33,6 +34,7 @@ import { WeightsModule } from './weights/weights.module.js';
     TreatmentsModule,
     GroomingModule,
     VetVisitsModule,
+    AppointmentsModule,
     WeightsModule,
     SymptomsModule,
     ReportsModule,

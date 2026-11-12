@@ -83,12 +83,10 @@ export function table(doc: Doc, columns: Column[], rows: string[][]) {
     let x = MARGIN;
     const y = doc.y;
     columns.forEach((c, i) => {
-      doc
-        .fillColor(COLORS.text)
-        .text(c.header, x + pad, y + pad, {
-          width: widths[i] - pad * 2,
-          align: c.align ?? 'left',
-        });
+      doc.fillColor(COLORS.text).text(c.header, x + pad, y + pad, {
+        width: widths[i] - pad * 2,
+        align: c.align ?? 'left',
+      });
       x += widths[i];
     });
     doc.y = y + h;
@@ -113,12 +111,10 @@ export function table(doc: Doc, columns: Column[], rows: string[][]) {
     const y = doc.y;
     let x = MARGIN;
     row.forEach((cell, i) => {
-      doc
-        .fillColor(COLORS.text)
-        .text(cell || '—', x + pad, y + pad, {
-          width: widths[i] - pad * 2,
-          align: columns[i].align ?? 'left',
-        });
+      doc.fillColor(COLORS.text).text(cell || '—', x + pad, y + pad, {
+        width: widths[i] - pad * 2,
+        align: columns[i].align ?? 'left',
+      });
       x += widths[i];
     });
     doc

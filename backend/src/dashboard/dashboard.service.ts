@@ -101,7 +101,18 @@ export class DashboardService {
   }
 
   async summary() {
-    const [pets, upcoming, activeTreatments, lastVisits] = await Promise.all([
+    const now = new Date();
+    const appointmentInclude = {
+      pet: { select: { id: true, name: true } },
+    } as const;
+    const [
+      pets,
+      upcoming,
+      activeTreatments,
+      lastVisits,
+      nextAppointments,
+      pendingAppointments,
+    ] = await Promise.all([
       this.prisma.pet.findMany({ orderBy: { id: 'asc' } }),
       this.upcoming(30),
       this.activeTreatments(),
@@ -109,6 +120,24 @@ export class DashboardService {
         orderBy: [{ date: 'desc' }, { id: 'desc' }],
         take: 5,
         include: { pet: { select: { id: true, name: true } } },
+      }),
+      this.prisma.vetAppointment.findMany({
+        where: {
+          status: 'SCHEDULED',
+          scheduledAt: { gte: new Date(now.getTime() - 3_600_000) },
+        },
+        orderBy: { scheduledAt: 'asc' },
+        take: 3,
+        include: appointmentInclude,
+      }),
+      this.prisma.vetAppointment.findMany({
+        where: {
+          status: 'SCHEDULED',
+          scheduledAt: { lt: new Date(now.getTime() - 3_600_000) },
+        },
+        orderBy: { scheduledAt: 'desc' },
+        take: 3,
+        include: appointmentInclude,
       }),
     ]);
     return {
@@ -118,6 +147,8 @@ export class DashboardService {
       upcoming,
       activeTreatments,
       lastVisits,
+      nextAppointments,
+      pendingAppointments,
     };
   }
 }

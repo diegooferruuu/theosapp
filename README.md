@@ -9,7 +9,7 @@ PWA de uso familiar para gestionar la salud y los cuidados de Theo, con notifica
 | Vacunas y desparasitación | Tipo, producto, fecha de aplicación, próxima fecha, notas y quién la registró. Botón *Renovar* que mantiene el intervalo. | 1 semana antes, 1 día antes, el mismo día (y un aviso si quedó vencida). Al registrar una aplicada hoy o ayer, avisa al resto |
 | Tratamientos | Pastillas (¼, ½, 1…), cápsulas, jarabes (ml), gotas orales, de oídos y ojos, pomadas, inyecciones, limpiezas, baños medicados y suplementos. Horarios fijos, cada X horas, cada X días, sin fecha de fin o según necesidad. Stock con aviso. | En el horario de cada toma, al finalizar, y a los demás cuando alguien marca una toma como dada |
 | Higiene y estética | Baño, corte de pelo, uñas, limpieza dental; próximo turno. | 3 días antes |
-| Visitas y peso | Visitas al veterinario (motivo, diagnóstico, peso) y gráfico de peso. | — |
+| Veterinario | Citas (con preparación), visitas (motivo, diagnóstico, peso) y gráfico de peso. | Al agendar una cita, el día anterior, 2 h antes y después para registrar el resultado |
 | Diario de síntomas | Vómito, diarrea, cojera, picazón, etc., con intensidad, fecha y hasta 4 fotos. | A los demás, al anotar uno de las últimas 24 h |
 | Historial en PDF | Ficha, vacunas, tratamientos, visitas, síntomas, peso e higiene del período elegido. | — |
 | Usuarios | Login, superadmin inicial, alta/edición/baja de usuarios y perfil propio. | — |
@@ -62,6 +62,15 @@ En *Tratamientos*, en el inicio y en la ficha de Theo aparece la toma que toca, 
 - Si la toma ya está marcada cuando llega su hora, no se envía el recordatorio.
 - Una toma marcada por error la puede deshacer quien la marcó o un superadmin.
 - **Toma pendiente:** si a los 45 minutos de la hora nadie marcó la toma, todos reciben "⚠️ ¿Ya le dieron su medicamento a Theo?". Aplica a medicamentos (no a limpiezas ni baños medicados).
+
+### Citas con el veterinario
+
+En *Veterinario → Citas* se agenda la fecha y hora, el motivo, el veterinario o la clínica, y la preparación ("ir en ayunas", "llevar muestra").
+
+- **Avisos:** a los demás al agendar; el día anterior; 2 horas antes, con la preparación y cuántos síntomas se anotaron desde la última visita; y 1 hora después, "¿Cómo fue la cita?".
+- **Preparación:** cada cita muestra los síntomas anotados desde la última visita y un acceso al historial en PDF.
+- **Registrar resultado:** abre la visita con los datos de la cita (diagnóstico, peso…). Al guardarla, la cita queda como realizada y se ofrece crear el tratamiento recetado.
+- **En el inicio:** aparecen la próxima cita y las citas pasadas sin resultado.
 
 ### Diario de síntomas
 
@@ -169,7 +178,8 @@ Todas las rutas van bajo `/api` y requieren sesión salvo `POST /auth/login` y `
 | Vacunas/desparasitación | `GET/POST /health-records`, `PATCH/DELETE /health-records/:id` (filtros `petId`, `type`) |
 | Tratamientos | `GET/POST /treatments`, `GET /treatments/:id/schedule`, `PATCH/DELETE /treatments/:id`, `POST /treatments/:id/doses`, `DELETE /treatments/:id/doses/:n` |
 | Higiene | `GET/POST /grooming`, `PATCH/DELETE /grooming/:id` |
-| Visitas | `GET/POST /vet-visits`, `PATCH/DELETE /vet-visits/:id` |
+| Visitas | `GET/POST /vet-visits` (con `appointmentId` opcional), `PATCH/DELETE /vet-visits/:id` |
+| Citas | `GET/POST /appointments` (`?open=1` para las programadas), `PATCH/DELETE /appointments/:id` |
 | Peso | `GET/POST /weights`, `PATCH/DELETE /weights/:id` |
 | Síntomas | `GET/POST /symptoms`, `PATCH/DELETE /symptoms/:id`, `POST /symptoms/:id/photos`, `GET/DELETE /symptoms/photos/:photoId` |
 | Historial PDF | `GET /pets/:id/report.pdf?months=12` |

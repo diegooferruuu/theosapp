@@ -10,7 +10,7 @@ import { useSession } from "@/components/session";
 import { ProgressBar } from "@/components/treatment-progress";
 import { Card, EmptyState, LoadError, Loading } from "@/components/ui";
 import { fetcher } from "@/lib/api";
-import { ageFrom, formatDate, formatLongDate, kg } from "@/lib/format";
+import { ageFrom, formatDate, formatDateTime, formatLongDate, kg } from "@/lib/format";
 import { itemIcon } from "@/lib/labels";
 import type { Dashboard, SymptomLog } from "@/lib/types";
 
@@ -63,6 +63,42 @@ export default function HomePage() {
 
       {data && (
         <div className="flex flex-col gap-6">
+          {(data.nextAppointments.length > 0 || data.pendingAppointments.length > 0) && (
+            <section className="flex flex-col gap-2">
+              {data.pendingAppointments.map((a) => (
+                <Link
+                  key={`p${a.id}`}
+                  href={`/visitas?cita=${a.id}`}
+                  className="flex items-center gap-3 rounded-2xl border border-danger/20 bg-danger-soft px-4 py-3 text-danger"
+                >
+                  <span className="text-xl" aria-hidden>
+                    🩺
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm">
+                    <b>¿Cómo fue la cita?</b> {a.reason} del {formatDate(a.scheduledAt)}. Toca para registrar el resultado.
+                  </span>
+                </Link>
+              ))}
+              {data.nextAppointments.map((a) => (
+                <Link key={a.id} href={`/visitas?cita=${a.id}`}>
+                  <Card className="flex items-center gap-3 transition-colors hover:border-primary/50">
+                    <span className="flex size-11 items-center justify-center rounded-xl bg-primary-soft text-xl" aria-hidden>
+                      📅
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium uppercase tracking-wide text-primary-strong">Próxima cita</p>
+                      <p className="truncate font-semibold">{a.reason}</p>
+                      <p className="truncate text-sm text-muted">
+                        {formatDateTime(a.scheduledAt)}
+                        {a.vetName ? ` · ${a.vetName}` : ""}
+                      </p>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </section>
+          )}
+
           <section className="grid gap-3 sm:grid-cols-2">
             {data.pets.map((pet) => (
               <Link key={pet.id} href={`/mascotas/${pet.id}`}>

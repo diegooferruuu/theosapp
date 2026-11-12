@@ -4,6 +4,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { DoseStatus } from "@/components/dose-status";
 import { DueBadge } from "@/components/due-badge";
+import { SymptomEntry } from "@/components/symptom-entry";
 import { PetAvatar } from "@/components/pet-avatar";
 import { useSession } from "@/components/session";
 import { ProgressBar } from "@/components/treatment-progress";
@@ -11,13 +12,14 @@ import { Card, EmptyState, LoadError, Loading } from "@/components/ui";
 import { fetcher } from "@/lib/api";
 import { ageFrom, formatDate, formatLongDate, kg } from "@/lib/format";
 import { itemIcon } from "@/lib/labels";
-import type { Dashboard } from "@/lib/types";
+import type { Dashboard, SymptomLog } from "@/lib/types";
 
 export default function HomePage() {
   const me = useSession();
   const { data, error, mutate } = useSWR<Dashboard>("/dashboard", fetcher, {
     refreshInterval: 60_000,
   });
+  const { data: symptoms } = useSWR<SymptomLog[]>("/symptoms?days=7", fetcher);
 
   const pending = data?.upcoming.filter((u) => u.daysUntil <= 7).length ?? 0;
   const treatments = data?.activeTreatments.length ?? 0;
@@ -137,6 +139,25 @@ export default function HomePage() {
               </div>
             )}
           </section>
+
+          {symptoms && symptoms.length > 0 && (
+            <section>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Síntomas esta semana</h2>
+                <Link href="/sintomas" className="text-sm font-medium text-primary">
+                  Ver diario
+                </Link>
+              </div>
+              <Card className="divide-y divide-line p-0">
+                {symptoms.slice(0, 3).map((s) => (
+                  <div key={s.id} className="px-4 py-3">
+                    <p className="mb-1 text-xs text-muted">{formatDate(s.occurredAt)}</p>
+                    <SymptomEntry s={s} />
+                  </div>
+                ))}
+              </Card>
+            </section>
+          )}
 
           {data.lastVisits.length > 0 && (
             <section>

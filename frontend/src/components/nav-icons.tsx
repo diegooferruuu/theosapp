@@ -46,6 +46,11 @@ export const NavIcon = {
       <circle cx="19" cy="11" r="2" />
     </svg>
   ),
+  symptom: () => (
+    <svg {...base}>
+      <path d="M3 12h4l2-5 4 10 2-5h6" />
+    </svg>
+  ),
   users: () => (
     <svg {...base}>
       <circle cx="9" cy="8" r="3.5" />

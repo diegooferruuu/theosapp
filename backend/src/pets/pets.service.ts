@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { appTimezone } from '../common/config.js';
+import { unlink } from 'node:fs/promises';
+import { join } from 'node:path';
+import { appTimezone, symptomPhotosDir } from '../common/config.js';
 import { parseDateOnly, todayIn } from '../common/dates.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreatePetDto, UpdatePetDto } from './pets.dto.js';
@@ -72,7 +74,15 @@ export class PetsService {
 
   async remove(id: number) {
     await this.ensureExists(id);
+    const photos = await this.prisma.symptomPhoto.findMany({
+      where: { symptom: { petId: id } },
+      select: { filename: true },
+    });
     await this.prisma.pet.delete({ where: { id } });
+    // Las filas se borran en cascada; los archivos de fotos, a mano.
+    for (const p of photos) {
+      await unlink(join(symptomPhotosDir(), p.filename)).catch(() => undefined);
+    }
     return { ok: true };
   }
 

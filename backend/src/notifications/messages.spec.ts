@@ -1,5 +1,10 @@
 import type { UpcomingItem } from '../dashboard/dashboard.service.js';
-import { doseGivenMessage, doseMessage, upcomingDigest } from './messages.js';
+import {
+  doseGivenMessage,
+  doseMessage,
+  pendingDoseMessage,
+  upcomingDigest,
+} from './messages.js';
 
 const item = (over: Partial<UpcomingItem>): UpcomingItem => ({
   kind: 'HEALTH',
@@ -94,5 +99,17 @@ describe('mensajes de aviso', () => {
     expect(n.title).toBe('✅ Theo ya tomó su medicamento');
     expect(n.body).toContain('Se la dio Mamá a las 08:05');
     expect(n.tag).toBe('toma-7');
+  });
+
+  it('toma pendiente: pregunta y reemplaza al recordatorio', () => {
+    const n = pendingDoseMessage({
+      ...treatment,
+      doseNumber: 2,
+      totalDoses: 14,
+      at: new Date('2026-11-12T12:00:00Z'),
+    });
+    expect(n.title).toBe('⚠️ ¿Ya le dieron su medicamento a Theo?');
+    expect(n.body).toContain('Nadie marcó la toma 2 de 14 de las 08:00');
+    expect(n).toMatchObject({ tag: 'toma-7', urgency: 'high' });
   });
 });

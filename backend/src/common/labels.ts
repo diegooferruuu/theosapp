@@ -17,3 +17,26 @@ export function escapeHtml(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
+
+export const SYMPTOM_LABEL: Record<string, string> = {
+  VOMIT: 'Vómito',
+  DIARRHEA: 'Diarrea',
+  COUGH: 'Tos',
+  SNEEZING: 'Estornudos',
+  LIMPING: 'Cojera',
+  ITCHING: 'Picazón / se rasca',
+  NO_APPETITE: 'No quiere comer',
+  LETHARGY: 'Decaído, sin energía',
+  SKIN: 'Piel',
+  EYES: 'Ojos',
+  EARS: 'Oídos',
+  BREATHING: 'Respiración agitada',
+  URINE: 'Orina',
+  OTHER: 'Otro',
+};
+
+export const SEVERITY_LABEL: Record<string, string> = {
+  MILD: 'leve',
+  MODERATE: 'moderado',
+  SEVERE: 'grave',
+};

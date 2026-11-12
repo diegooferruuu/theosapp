@@ -5,15 +5,25 @@ import { hourIn } from '../common/dates.js';
 import { DashboardService } from '../dashboard/dashboard.service.js';
 import type { UpcomingItem } from '../dashboard/dashboard.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { doseAt, dueDoseNumber, totalDoses } from '../treatments/schedule.js';
+import {
+  doseAt,
+  doseNumberAtOrBefore,
+  dueDoseNumber,
+  totalDoses,
+} from '../treatments/schedule.js';
 import { TreatmentsService } from '../treatments/treatments.service.js';
 import { groomingBucket, healthBucket } from './alerts.js';
 import { NotifierService } from '../notifier/notifier.service.js';
 import {
   doseMessage,
+  pendingDoseMessage,
   treatmentFinishedMessage,
   upcomingDigest,
 } from './messages.js';
+
+/** Minutos tras la hora de una toma para avisar que nadie la marcó. */
+const PENDING_AFTER_MIN = 45;
+const NOT_MEDICINE = ['CLEANING', 'MEDICATED_BATH'];
 
 @Injectable()
 export class NotificationsService implements OnApplicationBootstrap {
@@ -135,6 +145,39 @@ export class NotificationsService implements OnApplicationBootstrap {
         const at = doseAt(t, number);
         if (!at) continue;
         const message = doseMessage({
+          ...t,
+          doseNumber: number,
+          totalDoses: totalDoses(t),
+          at,
+        });
+        await this.markSent(
+          [key],
+          message.body,
+          await this.notifier.broadcast(message),
+        );
+      }
+
+      // Toma pendiente: nadie la marcó PENDING_AFTER_MIN minutos después (solo medicamentos).
+      for (const t of active) {
+        if (NOT_MEDICINE.includes(t.type)) continue;
+        const pendingFrom = new Date(
+          now.getTime() - PENDING_AFTER_MIN * 60_000,
+        );
+        const number = doseNumberAtOrBefore(t, pendingFrom);
+        const at = doseAt(t, number);
+        if (!at) continue;
+        const late = now.getTime() - at.getTime();
+        if (late > (PENDING_AFTER_MIN + 30) * 60_000) continue; // ventana de 30 min
+        const next = doseAt(t, number + 1);
+        if (next && next <= now) continue; // ya toca la siguiente
+        const signature = `${t.scheduleType}:${t.startAt.getTime()}:${t.frequencyHours ?? ''}:${t.times.join(',')}:${t.everyDays}`;
+        const key = `pending:${t.id}:${signature}:${number}`;
+        if (await this.wasSent(key)) continue;
+        const given = await this.prisma.medicationDose.count({
+          where: { treatmentId: t.id, doseNumber: number },
+        });
+        if (given) continue;
+        const message = pendingDoseMessage({
           ...t,
           doseNumber: number,
           totalDoses: totalDoses(t),

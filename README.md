@@ -10,6 +10,8 @@ PWA de uso familiar para gestionar la salud y los cuidados de Theo, con notifica
 | Tratamientos | Pastillas (¼, ½, 1…), cápsulas, jarabes (ml), gotas orales, de oídos y ojos, pomadas, inyecciones, limpiezas, baños medicados y suplementos. Horarios fijos, cada X horas, cada X días, sin fecha de fin o según necesidad. Stock con aviso. | En el horario de cada toma, al finalizar, y a los demás cuando alguien marca una toma como dada |
 | Higiene y estética | Baño, corte de pelo, uñas, limpieza dental; próximo turno. | 3 días antes |
 | Visitas y peso | Visitas al veterinario (motivo, diagnóstico, peso) y gráfico de peso. | — |
+| Diario de síntomas | Vómito, diarrea, cojera, picazón, etc., con intensidad, fecha y hasta 4 fotos. | A los demás, al anotar uno de las últimas 24 h |
+| Historial en PDF | Ficha, vacunas, tratamientos, visitas, síntomas, peso e higiene del período elegido. | — |
 | Usuarios | Login, superadmin inicial, alta/edición/baja de usuarios y perfil propio. | — |
 
 ## Estructura
@@ -59,6 +61,19 @@ En *Tratamientos*, en el inicio y en la ficha de Theo aparece la toma que toca, 
 - Si otra persona intenta marcar la misma toma, la app lo impide e indica quién la dio y cuándo.
 - Si la toma ya está marcada cuando llega su hora, no se envía el recordatorio.
 - Una toma marcada por error la puede deshacer quien la marcó o un superadmin.
+- **Toma pendiente:** si a los 45 minutos de la hora nadie marcó la toma, todos reciben "⚠️ ¿Ya le dieron su medicamento a Theo?". Aplica a medicamentos (no a limpiezas ni baños medicados).
+
+### Diario de síntomas
+
+Desde *Diario de síntomas* (menú *Más* en el celular) se anota qué se notó, con qué intensidad (leve, moderado o grave), cuándo, detalles y hasta 4 fotos.
+
+- Las fotos se reducen en el teléfono antes de subirlas (máximo 1600 px, en JPEG).
+- Se guardan en el volumen `uploads` del backend y solo se ven con sesión iniciada.
+- Al anotar algo de las últimas 24 h, se avisa al resto de la familia: 🚨 si es grave, 🩺 en los demás casos.
+
+### Historial en PDF
+
+En la ficha de Theo, *Historial médico en PDF → Ver PDF* genera un documento con ficha, vacunas y desparasitaciones, tratamientos (con tomas dadas), visitas, síntomas, gráfico de peso e higiene. Se elige el período (3, 6, 12 o 24 meses, o todo) y se puede compartir desde el visor del teléfono. Endpoint: `GET /api/pets/:id/report.pdf?months=12`.
 
 **Cómo se envían las alertas.** Cada 15 minutos el backend revisa vencimientos y, a partir de `DAILY_ALERT_HOUR`, envía un único resumen con todo lo pendiente. Cada aviso se registra en `notification_logs`, así que nunca se repite aunque el servidor se reinicie, y si el servidor estuvo apagado a la hora del aviso, se envía en la siguiente revisión. Las tomas de medicamentos se revisan cada minuto. Si una vacuna se *renueva* (nuevo registro del mismo producto), la anterior deja de generar avisos.
 
@@ -115,6 +130,7 @@ docker compose up -d --build
 - Las migraciones se aplican solas al arrancar el backend.
 - **HTTPS:** para instalar la PWA en el iPhone y usar cookies seguras hace falta HTTPS. Pon un certificado delante de Nginx (Caddy, certbot, Cloudflare Tunnel…) y define `COOKIE_SECURE=true` y `APP_URL=https://…`.
 - Copia de seguridad de la base: `docker compose -p theosapp exec db pg_dump -U theo theosapp > backup.sql`
+- Copia de seguridad de las fotos: `docker run --rm -v theosapp_uploads:/data -v $PWD:/backup alpine tar czf /backup/fotos.tgz -C /data .`
 
 ## Desarrollo local
 
@@ -155,6 +171,8 @@ Todas las rutas van bajo `/api` y requieren sesión salvo `POST /auth/login` y `
 | Higiene | `GET/POST /grooming`, `PATCH/DELETE /grooming/:id` |
 | Visitas | `GET/POST /vet-visits`, `PATCH/DELETE /vet-visits/:id` |
 | Peso | `GET/POST /weights`, `PATCH/DELETE /weights/:id` |
+| Síntomas | `GET/POST /symptoms`, `PATCH/DELETE /symptoms/:id`, `POST /symptoms/:id/photos`, `GET/DELETE /symptoms/photos/:photoId` |
+| Historial PDF | `GET /pets/:id/report.pdf?months=12` |
 | Resumen | `GET /dashboard` |
 | Notificaciones (superadmin) | `GET /notifications/logs`, `POST /notifications/run-daily` |
 

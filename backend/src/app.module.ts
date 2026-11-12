@@ -13,6 +13,8 @@ import { NotifierModule } from './notifier/notifier.module.js';
 import { PetsModule } from './pets/pets.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PushModule } from './push/push.module.js';
+import { ReportsModule } from './reports/reports.module.js';
+import { SymptomsModule } from './symptoms/symptoms.module.js';
 import { TreatmentsModule } from './treatments/treatments.module.js';
 import { UsersModule } from './users/users.module.js';
 import { VetVisitsModule } from './vet-visits/vet-visits.module.js';
@@ -32,6 +34,8 @@ import { WeightsModule } from './weights/weights.module.js';
     GroomingModule,
     VetVisitsModule,
     WeightsModule,
+    SymptomsModule,
+    ReportsModule,
     DashboardModule,
     PushModule,
     NotifierModule,

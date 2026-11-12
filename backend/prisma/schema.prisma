@@ -38,6 +38,7 @@ model User {
   vetVisits         VetVisit[]
   pushSubscriptions PushSubscription[]
   dosesGiven        MedicationDose[]
+  symptoms          SymptomLog[]
 
   @@map("users")
 }
@@ -61,6 +62,7 @@ model Pet {
   groomingLogs  GroomingLog[]
   vetVisits     VetVisit[]
   weights       WeightRecord[]
+  symptoms      SymptomLog[]
 
   @@map("pets")
 }
@@ -303,4 +305,63 @@ model AppSetting {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")
+}
+
+// ───────────────────────── Diario de síntomas ─────────────────────────
+
+enum SymptomCategory {
+  VOMIT
+  DIARRHEA
+  COUGH
+  SNEEZING
+  LIMPING
+  ITCHING
+  NO_APPETITE
+  LETHARGY
+  SKIN
+  EYES
+  EARS
+  BREATHING
+  URINE
+  OTHER
+}
+
+enum Severity {
+  MILD
+  MODERATE
+  SEVERE
+}
+
+model SymptomLog {
+  id          Int             @id @default(autoincrement())
+  petId       Int             @map("pet_id")
+  category    SymptomCategory
+  severity    Severity        @default(MILD)
+  occurredAt  DateTime        @map("occurred_at")
+  description String?
+  createdById Int?            @map("created_by_id")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  pet       Pet            @relation(fields: [petId], references: [id], onDelete: Cascade)
+  createdBy User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  photos    SymptomPhoto[]
+
+  @@index([petId, occurredAt])
+  @@map("symptom_logs")
+}
+
+/// Foto de un síntoma; el archivo vive en UPLOAD_DIR/symptoms/<filename>.
+model SymptomPhoto {
+  id        Int      @id @default(autoincrement())
+  symptomId Int      @map("symptom_id")
+  filename  String   @unique
+  mimeType  String   @map("mime_type")
+  size      Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  symptom SymptomLog @relation(fields: [symptomId], references: [id], onDelete: Cascade)
+
+  @@index([symptomId])
+  @@map("symptom_photos")
 }

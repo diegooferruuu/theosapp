@@ -16,7 +16,11 @@ ENV NODE_ENV=production PORT=3001
 COPY --from=build --chown=node:node /app/package.json /app/prisma.config.ts ./
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/assets ./assets
 COPY --from=build --chown=node:node /app/dist ./dist
+# Fotos subidas (se monta un volumen aquí; el dueño se hereda de la imagen)
+RUN mkdir -p /app/uploads && chown node:node /app/uploads
+ENV UPLOAD_DIR=/app/uploads
 USER node
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \

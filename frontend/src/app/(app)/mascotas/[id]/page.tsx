@@ -6,6 +6,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { DoseStatus } from "@/components/dose-status";
 import { DueBadge } from "@/components/due-badge";
+import { SymptomEntry } from "@/components/symptom-entry";
 import { PetAvatar } from "@/components/pet-avatar";
 import { PetFormModal } from "@/components/pet-form";
 import { useSession } from "@/components/session";
@@ -15,13 +16,14 @@ import { WeightChart, weightTrend } from "@/components/weight-chart";
 import { api, fetcher } from "@/lib/api";
 import { ageFrom, formatDate, kg } from "@/lib/format";
 import { groomingIcon, groomingLabel, healthIcon, healthLabel } from "@/lib/labels";
-import type { GroomingLog, HealthRecord, Pet, Treatment, VetVisit, WeightRecord } from "@/lib/types";
+import type { GroomingLog, HealthRecord, Pet, SymptomLog, Treatment, VetVisit, WeightRecord } from "@/lib/types";
 
 export default function PetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const me = useSession();
   const [editing, setEditing] = useState(false);
+  const [reportMonths, setReportMonths] = useState("12");
   const { data: pet, error, mutate } = useSWR<Pet>(`/pets/${id}`, fetcher);
   const { data: health } = useSWR<HealthRecord[]>(`/health-records?petId=${id}`, fetcher);
   const { data: grooming } = useSWR<GroomingLog[]>(`/grooming?petId=${id}`, fetcher);
@@ -31,6 +33,7 @@ export default function PetDetailPage() {
   );
   const { data: visits } = useSWR<VetVisit[]>(`/vet-visits?petId=${id}`, fetcher);
   const { data: weights } = useSWR<WeightRecord[]>(`/weights?petId=${id}`, fetcher);
+  const { data: symptoms } = useSWR<SymptomLog[]>(`/symptoms?petId=${id}&days=30`, fetcher);
 
   if (error) return <LoadError error={error} retry={() => mutate()} />;
   if (!pet) return <Loading />;
@@ -58,18 +61,18 @@ export default function PetDetailPage() {
       <Card className="mb-6">
         <div className="flex flex-wrap items-center gap-4">
           <PetAvatar pet={pet} className="size-16 text-4xl" />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-[10rem] flex-1">
             <h1 className="text-2xl font-semibold tracking-tight">{pet.name}</h1>
             <p className="text-sm text-muted">
               {[pet.species, pet.breed, ageFrom(pet.birthDate)].filter(Boolean).join(" · ") || "Completa su ficha"}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setEditing(true)}>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setEditing(true)}>
               Editar ficha
             </Button>
             {me.role === "SUPERADMIN" && (
-              <Button variant="danger" onClick={removePet}>
+              <Button variant="danger" className="flex-1 sm:flex-none" onClick={removePet}>
                 Eliminar
               </Button>
             )}
@@ -94,6 +97,35 @@ export default function PetDetailPage() {
           </div>
         </dl>
         {pet.notes && <p className="mt-4 whitespace-pre-line rounded-xl bg-surface-2 p-3 text-sm">{pet.notes}</p>}
+      </Card>
+
+      <Card className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">📄 Historial médico en PDF</p>
+          <p className="text-sm text-muted">Vacunas, tratamientos, visitas, síntomas y peso, listo para el veterinario.</p>
+        </div>
+        <div className="flex w-full gap-2 sm:w-auto">
+          <select
+            value={reportMonths}
+            onChange={(e) => setReportMonths(e.target.value)}
+            aria-label="Período del historial"
+            className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-sm sm:flex-none"
+          >
+            <option value="3">Últimos 3 meses</option>
+            <option value="6">Últimos 6 meses</option>
+            <option value="12">Último año</option>
+            <option value="24">Últimos 2 años</option>
+            <option value="0">Todo</option>
+          </select>
+          <a
+            href={`/api/pets/${pet.id}/report.pdf?months=${reportMonths}`}
+            target="_blank"
+            rel="noopener"
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-fg hover:bg-primary-strong"
+          >
+            Ver PDF
+          </a>
+        </div>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -171,6 +203,22 @@ export default function PetDetailPage() {
                 </Card>
               ))}
             </div>
+          )}
+        </section>
+
+        <section className="lg:col-span-2">
+          <SectionTitle title="Síntomas (últimos 30 días)" href="/sintomas" />
+          {!symptoms?.length ? (
+            <EmptyState icon="🩺" title="Sin síntomas anotados" />
+          ) : (
+            <Card className="divide-y divide-line p-0">
+              {symptoms.slice(0, 5).map((s) => (
+                <div key={s.id} className="px-4 py-3">
+                  <p className="mb-1 text-xs text-muted">{formatDate(s.occurredAt)}</p>
+                  <SymptomEntry s={s} />
+                </div>
+              ))}
+            </Card>
           )}
         </section>
 

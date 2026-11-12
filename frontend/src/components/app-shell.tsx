@@ -25,6 +25,7 @@ const NAV: NavItem[] = [
   { href: "/tratamientos", label: "Tratamientos", short: "Medicinas", icon: NavIcon.pill },
   { href: "/higiene", label: "Higiene y estética", short: "Higiene", icon: NavIcon.bath },
   { href: "/visitas", label: "Visitas y peso", icon: NavIcon.stethoscope },
+  { href: "/sintomas", label: "Diario de síntomas", icon: NavIcon.symptom },
   { href: "/mascotas", label: "Mascotas", icon: NavIcon.paw },
   { href: "/usuarios", label: "Usuarios", icon: NavIcon.users, admin: true },
   { href: "/perfil", label: "Mi perfil", icon: NavIcon.user },

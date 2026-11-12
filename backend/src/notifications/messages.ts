@@ -174,6 +174,25 @@ export function doseGivenMessage(
   };
 }
 
+/** Nadie marcó la toma un rato después de su hora. */
+export function pendingDoseMessage(
+  t: TreatmentInfo & {
+    doseNumber: number;
+    totalDoses: number | null;
+    at: Date;
+  },
+): AppNotification {
+  const time = formatTime(t.at, appTimezone());
+  return {
+    title: `⚠️ ¿Ya le dieron su medicamento a ${t.pet.name}?`,
+    body: `Nadie marcó la ${doseLabel(t.doseNumber, t.totalDoses).toLowerCase()} de las ${time}: ${t.medicineName} — ${t.dosage}.\nSi ya se la dieron, márquenla en la app.`,
+    url: '/tratamientos',
+    tag: `toma-${t.id}`,
+    ttl: 2 * 3600,
+    urgency: 'high',
+  };
+}
+
 /** Aviso a todos cuando queda poco stock. */
 export function stockLowMessage(t: {
   id: number;

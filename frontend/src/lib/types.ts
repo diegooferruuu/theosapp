@@ -192,3 +192,33 @@ export interface Dashboard {
   activeTreatments: Treatment[];
   lastVisits: VetVisit[];
 }
+
+export type SymptomCategory =
+  | "VOMIT"
+  | "DIARRHEA"
+  | "COUGH"
+  | "SNEEZING"
+  | "LIMPING"
+  | "ITCHING"
+  | "NO_APPETITE"
+  | "LETHARGY"
+  | "SKIN"
+  | "EYES"
+  | "EARS"
+  | "BREATHING"
+  | "URINE"
+  | "OTHER";
+
+export type Severity = "MILD" | "MODERATE" | "SEVERE";
+
+export interface SymptomLog {
+  id: number;
+  petId: number;
+  category: SymptomCategory;
+  severity: Severity;
+  occurredAt: string;
+  description: string | null;
+  pet: PetRef;
+  createdBy: PetRef | null;
+  photos: { id: number }[];
+}

@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f4ef;
+  --surface: #ffffff;
+  --surface-2: #f1eee7;
+  --line: #e4dfd4;
+  --fg: #1f2421;
+  --muted: #6b6f68;
+  --primary: #0f766e;
+  --primary-strong: #115e59;
+  --primary-soft: #dff3ef;
+  --primary-fg: #ffffff;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --warn: #b45309;
+  --warn-soft: #fef3c7;
+  --ok: #15803d;
+  --ok-soft: #dcfce7;
+  --info: #1d4ed8;
+  --info-soft: #e0e7ff;
+  --chart-1: #0d9488; /* validado: banda L, croma y contraste (claro) */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121513;
+    --surface: #1a1e1c;
+    --surface-2: #222724;
+    --line: #2f3531;
+    --fg: #e9ece8;
+    --muted: #9aa29c;
+    --primary: #2dd4bf;
+    --primary-strong: #5eead4;
+    --primary-soft: #133b37;
+    --primary-fg: #06201d;
+    --danger: #f87171;
+    --danger-soft: #3b1715;
+    --warn: #fbbf24;
+    --warn-soft: #3a2a0c;
+    --ok: #4ade80;
+    --ok-soft: #12301d;
+    --info: #93c5fd;
+    --info-soft: #172449;
+    --chart-1: #10a99a; /* validado contra superficie oscura */
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-fg: var(--primary-fg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-chart-1: var(--chart-1);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+input,
+select,
+textarea {
+  font-size: 16px; /* evita zoom automático en iOS */
+}
+
+input[type="date"],
+input[type="datetime-local"] {
+  min-height: 2.75rem;
+}

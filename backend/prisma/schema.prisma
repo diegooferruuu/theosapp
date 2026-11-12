@@ -1,0 +1,208 @@
+// Esquema de base de datos — Theo & Jovero (Fase 1: Módulo Veterinario + Usuarios)
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Usuarios ─────────────────────────────
+
+enum Role {
+  SUPERADMIN
+  USER
+}
+
+model User {
+  id                    Int       @id @default(autoincrement())
+  name                  String
+  username              String    @unique
+  passwordHash          String    @map("password_hash")
+  role                  Role      @default(USER)
+  active                Boolean   @default(true)
+  telegramChatId        String?   @map("telegram_chat_id")
+  telegramLinkCode      String?   @unique @map("telegram_link_code")
+  telegramLinkExpiresAt DateTime? @map("telegram_link_expires_at")
+  notificationsEnabled  Boolean   @default(true) @map("notifications_enabled")
+  /// Se incrementa al cambiar contraseña o desactivar el usuario para invalidar sesiones.
+  tokenVersion          Int       @default(0) @map("token_version")
+  lastLoginAt           DateTime? @map("last_login_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  healthRecords HealthRecord[]
+  treatments    MedicationTreatment[]
+  groomingLogs  GroomingLog[]
+  vetVisits     VetVisit[]
+
+  @@map("users")
+}
+
+// ───────────────────────────── Mascotas ─────────────────────────────
+
+model Pet {
+  id              Int       @id @default(autoincrement())
+  name            String
+  species         String?
+  breed           String?
+  birthDate       DateTime? @map("birth_date") @db.Date
+  /// Se recalcula a partir del registro de peso más reciente.
+  currentWeightKg Float?    @map("current_weight_kg")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  healthRecords HealthRecord[]
+  treatments    MedicationTreatment[]
+  groomingLogs  GroomingLog[]
+  vetVisits     VetVisit[]
+  weights       WeightRecord[]
+
+  @@map("pets")
+}
+
+// ──────────────────── Vacunas y desparasitaciones ────────────────────
+
+enum HealthRecordType {
+  VACCINE
+  DEWORMING_INTERNAL
+  DEWORMING_EXTERNAL
+}
+
+model HealthRecord {
+  id          Int              @id @default(autoincrement())
+  petId       Int              @map("pet_id")
+  type        HealthRecordType @map("record_type")
+  name        String
+  dateGiven   DateTime         @map("date_given") @db.Date
+  nextDueDate DateTime?        @map("next_due_date") @db.Date
+  notes       String?
+  createdById Int?             @map("created_by_id")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  pet       Pet   @relation(fields: [petId], references: [id], onDelete: Cascade)
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([petId])
+  @@index([nextDueDate])
+  @@map("health_records")
+}
+
+// ──────────────────────── Tratamientos médicos ────────────────────────
+
+enum TreatmentStatus {
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
+model MedicationTreatment {
+  id             Int             @id @default(autoincrement())
+  petId          Int             @map("pet_id")
+  medicineName   String          @map("medicine_name")
+  dosage         String
+  startAt        DateTime        @map("start_date")
+  durationDays   Int             @map("duration_days")
+  frequencyHours Int             @map("frequency_hours")
+  status         TreatmentStatus @default(ACTIVE)
+  /// Enviar un mensaje de Telegram en el horario de cada toma.
+  notifyDoses    Boolean         @default(true) @map("notify_doses")
+  notes          String?
+  createdById    Int?            @map("created_by_id")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  pet       Pet   @relation(fields: [petId], references: [id], onDelete: Cascade)
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([petId])
+  @@index([status])
+  @@map("medication_treatments")
+}
+
+// ───────────────────────── Higiene y estética ─────────────────────────
+
+enum GroomingServiceType {
+  BATH
+  HAIRCUT
+  NAIL_TRIM
+  DENTAL_CLEANING
+}
+
+model GroomingLog {
+  id          Int                 @id @default(autoincrement())
+  petId       Int                 @map("pet_id")
+  serviceType GroomingServiceType @map("service_type")
+  dateDone    DateTime            @map("date_done") @db.Date
+  nextDueDate DateTime?           @map("next_due_date") @db.Date
+  notes       String?
+  createdById Int?                @map("created_by_id")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  pet       Pet   @relation(fields: [petId], references: [id], onDelete: Cascade)
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([petId])
+  @@index([nextDueDate])
+  @@map("grooming_logs")
+}
+
+// ─────────────────────── Historial médico y peso ───────────────────────
+
+model VetVisit {
+  id          Int      @id @default(autoincrement())
+  petId       Int      @map("pet_id")
+  date        DateTime @db.Date
+  reason      String
+  diagnosis   String?
+  vetName     String?  @map("vet_name")
+  weightKg    Float?   @map("weight_kg")
+  notes       String?
+  createdById Int?     @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  pet          Pet           @relation(fields: [petId], references: [id], onDelete: Cascade)
+  createdBy    User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  weightRecord WeightRecord?
+
+  @@index([petId])
+  @@map("vet_visits")
+}
+
+model WeightRecord {
+  id         Int      @id @default(autoincrement())
+  petId      Int      @map("pet_id")
+  date       DateTime @db.Date
+  weightKg   Float    @map("weight_kg")
+  notes      String?
+  /// Si el peso se registró en una visita al veterinario.
+  vetVisitId Int?     @unique @map("vet_visit_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  pet      Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  vetVisit VetVisit? @relation(fields: [vetVisitId], references: [id], onDelete: Cascade)
+
+  @@index([petId, date])
+  @@map("weight_records")
+}
+
+// ───────────────────────── Notificaciones ─────────────────────────
+
+/// Registro de alertas enviadas, evita duplicados entre ejecuciones del cron.
+model NotificationLog {
+  id         Int      @id @default(autoincrement())
+  key        String   @unique
+  message    String
+  recipients Int      @default(0)
+  sentAt     DateTime @default(now()) @map("sent_at")
+
+  @@map("notification_logs")
+}

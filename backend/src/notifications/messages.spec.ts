@@ -53,14 +53,34 @@ describe('mensajes de aviso', () => {
   it('recordatorio de toma: urgente, corto y pide marcarla', () => {
     const n = doseMessage({
       ...treatment,
+      type: 'PILL',
+      instructions: 'Triturada en la comida',
       doseNumber: 3,
       totalDoses: 21,
       at: new Date('2026-11-12T12:00:00Z'),
     });
     expect(n.title).toBe('💊 Medicamento de Theo');
     expect(n.body).toContain('Toma 3 de 21 · 08:00');
-    expect(n.body).toContain('márcala como dada');
+    expect(n.body).toContain('Triturada en la comida');
+    expect(n.body).toContain('márcalo como dado');
     expect(n).toMatchObject({ urgency: 'high', ttl: 1800, tag: 'toma-7' });
+  });
+
+  it('limpieza: textos propios y sin total si es continua', () => {
+    const n = doseGivenMessage({
+      ...treatment,
+      type: 'CLEANING',
+      medicineName: 'Otoclean',
+      dosage: 'Limpieza de oídos',
+      doseNumber: 5,
+      totalDoses: null,
+      givenAt: new Date('2026-11-12T23:00:00Z'),
+      givenBy: 'Diego',
+    });
+    expect(n.title).toBe('✅ Limpieza de Theo hecha');
+    expect(n.body).toBe(
+      'Otoclean — Limpieza de oídos · toma 5\nLo hizo Diego a las 19:00.',
+    );
   });
 
   it('toma dada: dice quién y a qué hora, y reemplaza al recordatorio', () => {

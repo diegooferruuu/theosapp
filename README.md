@@ -7,7 +7,7 @@ PWA de uso familiar para gestionar la salud y los cuidados de Theo, con notifica
 | Módulo | Qué hace | Notificaciones |
 |---|---|---|
 | Vacunas y desparasitación | Tipo, producto, fecha de aplicación, próxima fecha, notas y quién la registró. Botón *Renovar* que mantiene el intervalo. | 1 semana antes, 1 día antes, el mismo día (y un aviso si quedó vencida). Al registrar una aplicada hoy o ayer, avisa al resto |
-| Tratamientos | Medicamento, dosis, inicio, duración, frecuencia, estado. Calcula cada toma y permite marcarla como dada. | En el horario de cada toma, al finalizar, y a los demás cuando alguien marca una toma como dada |
+| Tratamientos | Pastillas (¼, ½, 1…), cápsulas, jarabes (ml), gotas orales, de oídos y ojos, pomadas, inyecciones, limpiezas, baños medicados y suplementos. Horarios fijos, cada X horas, cada X días, sin fecha de fin o según necesidad. Stock con aviso. | En el horario de cada toma, al finalizar, y a los demás cuando alguien marca una toma como dada |
 | Higiene y estética | Baño, corte de pelo, uñas, limpieza dental; próximo turno. | 3 días antes |
 | Visitas y peso | Visitas al veterinario (motivo, diagnóstico, peso) y gráfico de peso. | — |
 | Usuarios | Login, superadmin inicial, alta/edición/baja de usuarios y perfil propio. | — |
@@ -37,6 +37,19 @@ Cada persona las activa en **Mi perfil → Notificaciones en este dispositivo**.
 - **Android y escritorio:** se activan desde el navegador.
 - Las claves VAPID se generan solas la primera vez y se guardan en la base (`app_settings`). Si se prefiere, se pueden fijar con `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`.
 - Los dispositivos que desinstalan la app o revocan el permiso se eliminan solos.
+
+### Tratamientos: tipos, horarios y stock
+
+Cada tipo pide sus propios datos y la app arma el texto de la dosis, por ejemplo "½ pastilla de 50 mg (25 mg) · con comida", "2,5 ml (125 mg)", "4 gotas · oído derecho" o "Limpieza de oídos".
+
+**Horarios:**
+- **Horarios fijos** (08:00 y 20:00, en hora de La Paz): todos los días o cada N días.
+- **Cada X horas** desde la primera toma.
+- **Según necesidad:** con un mínimo de horas entre dosis y un máximo por día. Si alguien intenta dar otra antes de tiempo, la app lo bloquea e indica cuándo se podrá.
+
+La duración se indica en días, o el tratamiento puede no tener fecha de fin. Las indicaciones ("agitar antes", "triturada en la comida") aparecen junto al botón al momento de darlo.
+
+**Stock (opcional):** cada toma marcada descuenta lo que corresponde (½ pastilla resta 0,5). Cuando baja del umbral, por defecto 3 tomas, todos reciben "📦 Queda poco…". Se repone con *Reponer* en la tarjeta.
 
 ### Tomas dadas: evitar dosis dobles
 

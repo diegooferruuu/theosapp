@@ -54,28 +54,89 @@ export function upcomingDigest(items: UpcomingItem[]): AppNotification {
 
 interface TreatmentInfo {
   id: number;
+  type?: string;
   medicineName: string;
   dosage: string;
+  instructions?: string | null;
   pet: { name: string };
 }
+
+/** Textos según el tipo: los medicamentos "se toman"; las limpiezas "se hacen". */
+const COPY: Record<
+  string,
+  {
+    icon: string;
+    reminder: (pet: string) => string;
+    done: (pet: string) => string;
+  }
+> = {
+  MEDICINE: {
+    icon: '💊',
+    reminder: (pet) => `Medicamento de ${pet}`,
+    done: (pet) => `${pet} ya tomó su medicamento`,
+  },
+  SUPPLEMENT: {
+    icon: '🦴',
+    reminder: (pet) => `Suplemento de ${pet}`,
+    done: (pet) => `${pet} ya tomó su suplemento`,
+  },
+  EAR_DROPS: {
+    icon: '👂',
+    reminder: (pet) => `Gotas para los oídos de ${pet}`,
+    done: (pet) => `${pet} ya tiene sus gotas`,
+  },
+  EYE_DROPS: {
+    icon: '👁️',
+    reminder: (pet) => `Gotas para los ojos de ${pet}`,
+    done: (pet) => `${pet} ya tiene sus gotas`,
+  },
+  OINTMENT: {
+    icon: '🧴',
+    reminder: (pet) => `Pomada para ${pet}`,
+    done: (pet) => `${pet} ya tiene su pomada`,
+  },
+  CLEANING: {
+    icon: '🧽',
+    reminder: (pet) => `Limpieza de ${pet}`,
+    done: (pet) => `Limpieza de ${pet} hecha`,
+  },
+  MEDICATED_BATH: {
+    icon: '🛁',
+    reminder: (pet) => `Baño medicado de ${pet}`,
+    done: (pet) => `Baño medicado de ${pet} hecho`,
+  },
+};
+const copyFor = (type?: string) => COPY[type ?? ''] ?? COPY.MEDICINE;
+const isMedicine = (type?: string) =>
+  !type ||
+  ![
+    'EAR_DROPS',
+    'EYE_DROPS',
+    'OINTMENT',
+    'CLEANING',
+    'MEDICATED_BATH',
+  ].includes(type);
+
+const doseLabel = (n: number, total: number | null) =>
+  total ? `Toma ${n} de ${total}` : `Toma ${n}`;
 
 /** Recordatorio a la hora de una toma. */
 export function doseMessage(
   t: TreatmentInfo & {
     doseNumber: number;
-    totalDoses: number;
+    totalDoses: number | null;
     at: Date;
     notes?: string | null;
   },
 ): AppNotification {
-  const time = formatTime(t.at, appTimezone());
+  const c = copyFor(t.type);
   return {
-    title: `💊 Medicamento de ${t.pet.name}`,
+    title: `${c.icon} ${c.reminder(t.pet.name)}`,
     body: [
       `${t.medicineName} — ${t.dosage}`,
-      `Toma ${t.doseNumber} de ${t.totalDoses} · ${time}`,
-      t.notes,
-      'Al dársela, márcala como dada en la app.',
+      t.instructions,
+      `${doseLabel(t.doseNumber, t.totalDoses)} · ${formatTime(t.at, appTimezone())}`,
+      'Al hacerlo, márcalo como dado en la app.',
     ]
       .filter(Boolean)
       .join('\n'),
@@ -90,18 +151,47 @@ export function doseMessage(
 export function doseGivenMessage(
   t: TreatmentInfo & {
     doseNumber: number;
-    totalDoses: number;
+    totalDoses: number | null;
     givenAt: Date;
     givenBy: string;
+    asNeeded?: boolean;
   },
 ): AppNotification {
+  const c = copyFor(t.type);
+  const who = isMedicine(t.type)
+    ? `Se la dio ${t.givenBy}`
+    : `Lo hizo ${t.givenBy}`;
+  const which = t.asNeeded
+    ? 'dosis según necesidad'
+    : doseLabel(t.doseNumber, t.totalDoses).toLowerCase();
   return {
-    title: `✅ ${t.pet.name} ya tomó su medicamento`,
-    body: `${t.medicineName} — ${t.dosage} · toma ${t.doseNumber} de ${t.totalDoses}\nSe la dio ${t.givenBy} a las ${formatTime(t.givenAt, appTimezone())}.`,
+    title: `✅ ${c.done(t.pet.name)}`,
+    body: `${t.medicineName} — ${t.dosage} · ${which}\n${who} a las ${formatTime(t.givenAt, appTimezone())}.`,
     url: '/tratamientos',
     tag: `toma-${t.id}`,
     ttl: 6 * 3600,
     urgency: 'high',
+  };
+}
+
+/** Aviso a todos cuando queda poco stock. */
+export function stockLowMessage(t: {
+  id: number;
+  medicineName: string;
+  pet: { name: string };
+  remaining: string;
+  daysLeft: number | null;
+}): AppNotification {
+  const days =
+    t.daysLeft !== null
+      ? ` (≈ ${t.daysLeft} ${t.daysLeft === 1 ? 'día' : 'días'})`
+      : '';
+  return {
+    title: `📦 Queda poco ${t.medicineName}`,
+    body: `Quedan ${t.remaining}${days} para ${t.pet.name}. Hay que comprar más.`,
+    url: '/tratamientos',
+    tag: `stock-${t.id}`,
+    ttl: 24 * 3600,
   };
 }
 

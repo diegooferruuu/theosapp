@@ -5,7 +5,7 @@ import { hourIn } from '../common/dates.js';
 import { DashboardService } from '../dashboard/dashboard.service.js';
 import type { UpcomingItem } from '../dashboard/dashboard.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { dueDoseIndex, doseTimes } from '../treatments/schedule.js';
+import { doseAt, dueDoseNumber, totalDoses } from '../treatments/schedule.js';
 import { TreatmentsService } from '../treatments/treatments.service.js';
 import { groomingBucket, healthBucket } from './alerts.js';
 import { NotifierService } from '../notifier/notifier.service.js';
@@ -115,24 +115,30 @@ export class NotificationsService implements OnApplicationBootstrap {
       }
 
       const active = await this.prisma.medicationTreatment.findMany({
-        where: { status: 'ACTIVE', notifyDoses: true },
+        where: {
+          status: 'ACTIVE',
+          notifyDoses: true,
+          scheduleType: { not: 'AS_NEEDED' },
+        },
         include: { pet: { select: { name: true } } },
       });
       for (const t of active) {
-        const index = dueDoseIndex(t, now, 30);
-        if (index === null) continue;
-        const key = `dose:${t.id}:${t.startAt.getTime()}:${t.frequencyHours}:${index}`;
+        const number = dueDoseNumber(t, now, 30);
+        if (number === null) continue;
+        const signature = `${t.scheduleType}:${t.startAt.getTime()}:${t.frequencyHours ?? ''}:${t.times.join(',')}:${t.everyDays}`;
+        const key = `dose:${t.id}:${signature}:${number}`;
         if (await this.wasSent(key)) continue;
         const alreadyGiven = await this.prisma.medicationDose.count({
-          where: { treatmentId: t.id, doseNumber: index + 1 },
+          where: { treatmentId: t.id, doseNumber: number },
         });
-        if (alreadyGiven) continue; // alguien ya se la dio (p. ej. un poco antes)
-        const doses = doseTimes(t);
+        if (alreadyGiven) continue; // alguien ya la dio (p. ej. un poco antes)
+        const at = doseAt(t, number);
+        if (!at) continue;
         const message = doseMessage({
           ...t,
-          doseNumber: index + 1,
-          totalDoses: doses.length,
-          at: doses[index],
+          doseNumber: number,
+          totalDoses: totalDoses(t),
+          at,
         });
         await this.markSent(
           [key],

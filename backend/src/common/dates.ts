@@ -78,3 +78,42 @@ export function relativeDays(days: number): string {
   if (days === -1) return 'ayer';
   return days > 0 ? `en ${days} días` : `hace ${-days} días`;
 }
+
+/** Diferencia (ms) entre la hora local de `timeZone` y UTC en ese instante. */
+function tzOffsetMs(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(instant);
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  const asUtc = Date.UTC(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    get('hour'),
+    get('minute'),
+    get('second'),
+  );
+  return asUtc - Math.floor(instant.getTime() / 1000) * 1000;
+}
+
+/** Instante que corresponde a la fecha 'YYYY-MM-DD' y hora 'HH:MM' en `timeZone`. */
+export function zonedDateTime(
+  date: string,
+  time: string,
+  timeZone: string,
+): Date {
+  const [y, m, d] = date.split('-').map(Number);
+  const [hh, mm] = time.split(':').map(Number);
+  const guess = Date.UTC(y, m - 1, d, hh, mm);
+  const first = guess - tzOffsetMs(new Date(guess), timeZone);
+  // Segunda pasada por si el cambio de horario cae en medio.
+  return new Date(guess - tzOffsetMs(new Date(first), timeZone));
+}

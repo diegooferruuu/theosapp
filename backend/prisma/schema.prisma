@@ -19,18 +19,18 @@ enum Role {
 }
 
 model User {
-  id                    Int       @id @default(autoincrement())
-  name                  String
-  username              String    @unique
-  passwordHash          String    @map("password_hash")
-  role                  Role      @default(USER)
-  active                Boolean   @default(true)
-  notificationsEnabled  Boolean   @default(true) @map("notifications_enabled")
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  username             String    @unique
+  passwordHash         String    @map("password_hash")
+  role                 Role      @default(USER)
+  active               Boolean   @default(true)
+  notificationsEnabled Boolean   @default(true) @map("notifications_enabled")
   /// Se incrementa al cambiar contraseña o desactivar el usuario para invalidar sesiones.
-  tokenVersion          Int       @default(0) @map("token_version")
-  lastLoginAt           DateTime? @map("last_login_at")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  tokenVersion         Int       @default(0) @map("token_version")
+  lastLoginAt          DateTime? @map("last_login_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   healthRecords     HealthRecord[]
   treatments        MedicationTreatment[]
@@ -101,21 +101,75 @@ enum TreatmentStatus {
   CANCELLED
 }
 
+enum TreatmentType {
+  PILL
+  CAPSULE
+  LIQUID
+  ORAL_DROPS
+  EAR_DROPS
+  EYE_DROPS
+  OINTMENT
+  INJECTION
+  CLEANING
+  MEDICATED_BATH
+  SUPPLEMENT
+  OTHER
+}
+
+enum ScheduleType {
+  /// Cada X horas desde la primera toma.
+  INTERVAL
+  /// A horas fijas del día, todos los días o cada N días.
+  FIXED_TIMES
+  /// Sin horario: cuando haga falta, con un intervalo mínimo.
+  AS_NEEDED
+}
+
+enum FoodTiming {
+  WITH_FOOD
+  FASTING
+}
+
 model MedicationTreatment {
-  id             Int             @id @default(autoincrement())
-  petId          Int             @map("pet_id")
-  medicineName   String          @map("medicine_name")
-  dosage         String
-  startAt        DateTime        @map("start_date")
-  durationDays   Int             @map("duration_days")
-  frequencyHours Int             @map("frequency_hours")
-  status         TreatmentStatus @default(ACTIVE)
+  id               Int             @id @default(autoincrement())
+  petId            Int             @map("pet_id")
+  type             TreatmentType   @default(OTHER)
+  /// Nombre del medicamento o producto (champú, limpiador…).
+  medicineName     String          @map("medicine_name")
+  /// Texto legible de la dosis ("½ pastilla de 50 mg · con comida").
+  dosage           String
+  /// Concentración: "50 mg" por pastilla, "50 mg/ml" en jarabes.
+  strength         String?
+  /// Cantidad por toma (0.5 pastillas, 2.5 ml, 4 gotas…).
+  amount           Float?
+  /// Unidad cuando el tipo la deja elegir (gota/tira, ml/UI, "capa fina"…).
+  unit             String?
+  /// Zona: oído derecho, ambos ojos, pata delantera, oídos (limpieza)…
+  site             String?
+  foodTiming       FoodTiming?     @map("food_timing")
+  /// Indicaciones cortas que se muestran al dar la toma.
+  instructions     String?
+  scheduleType     ScheduleType    @default(INTERVAL) @map("schedule_type")
+  startAt          DateTime        @map("start_date")
+  /// null = sin fecha de fin.
+  durationDays     Int?            @map("duration_days")
+  frequencyHours   Int?            @map("frequency_hours")
+  /// Horarios fijos 'HH:MM' (hora local).
+  times            String[]        @default([])
+  everyDays        Int             @default(1) @map("every_days")
+  minIntervalHours Float?          @map("min_interval_hours")
+  maxPerDay        Int?            @map("max_per_day")
+  /// Stock restante, en la unidad de la dosis (pastillas, ml, gotas, usos).
+  stockQuantity    Float?          @map("stock_quantity")
+  /// Avisar cuando el stock baje de este valor (por defecto, 3 tomas).
+  stockAlertAt     Float?          @map("stock_alert_at")
+  status           TreatmentStatus @default(ACTIVE)
   /// Enviar un mensaje de Telegram en el horario de cada toma.
-  notifyDoses    Boolean         @default(true) @map("notify_doses")
-  notes          String?
-  createdById    Int?            @map("created_by_id")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
+  notifyDoses      Boolean         @default(true) @map("notify_doses")
+  notes            String?
+  createdById      Int?            @map("created_by_id")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
 
   pet       Pet              @relation(fields: [petId], references: [id], onDelete: Cascade)
   createdBy User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)

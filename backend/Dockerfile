@@ -1,4 +1,4 @@
-# ─── API Theo & Jovero (NestJS + Prisma) ───
+# ─── API Theo’s App (NestJS + Prisma) ───
 FROM node:24-slim AS base
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \

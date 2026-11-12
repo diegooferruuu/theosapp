@@ -1,4 +1,4 @@
-// Esquema de base de datos — Theo & Jovero (Fase 1: Módulo Veterinario + Usuarios)
+// Esquema de base de datos — Theo’s App (Fase 1: Módulo Veterinario + Usuarios)
 
 generator client {
   provider            = "prisma-client"

@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { ServiceWorker } from "@/components/service-worker";
+import { APP_DESCRIPTION, APP_NAME } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Theo & Jovero", template: "%s · Theo & Jovero" },
-  description: "Cuidados, salud y recordatorios de las mascotas de la casa",
-  applicationName: "Theo & Jovero",
-  appleWebApp: { capable: true, title: "Theo & Jovero", statusBarStyle: "default" },
+  title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
+  appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 

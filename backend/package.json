@@ -1,7 +1,7 @@
 {
   "name": "theosapp-backend",
   "version": "0.0.1",
-  "description": "API de Theo & Jovero (NestJS + Prisma)",
+  "description": "API de Theo’s App (NestJS + Prisma)",
   "author": "",
   "private": true,
   "license": "UNLICENSED",

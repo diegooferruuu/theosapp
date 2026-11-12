@@ -1,4 +1,4 @@
-# Theo & Jovero 🐾
+# Theo’s App 🐾
 
 PWA de uso familiar para gestionar la salud y los cuidados de las mascotas de la casa, con recordatorios por Telegram.
 

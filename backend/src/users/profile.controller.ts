@@ -99,7 +99,7 @@ export class ProfileController {
     }
     await this.telegram.sendMessage(
       profile.telegramChatId,
-      `🐾 ¡Hola ${profile.name}! Las notificaciones de Theo & Jovero funcionan correctamente.`,
+      `🐾 ¡Hola ${profile.name}! Las notificaciones de Theo’s App funcionan correctamente.`,
     );
     return { ok: true };
   }

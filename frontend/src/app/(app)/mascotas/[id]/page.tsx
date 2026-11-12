@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import useSWR from "swr";
 import { DueBadge } from "@/components/due-badge";
+import { PetAvatar } from "@/components/pet-avatar";
 import { PetFormModal } from "@/components/pet-form";
 import { useSession } from "@/components/session";
 import { ProgressBar } from "@/components/treatment-progress";
@@ -52,7 +53,7 @@ export default function PetDetailPage() {
       </Link>
       <Card className="mb-6">
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex size-16 items-center justify-center rounded-2xl bg-primary-soft text-4xl">🐾</div>
+          <PetAvatar pet={pet} className="size-16 text-4xl" />
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold tracking-tight">{pet.name}</h1>
             <p className="text-sm text-muted">

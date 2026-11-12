@@ -3,6 +3,7 @@
 import Link from "next/link";
 import useSWR from "swr";
 import { DueBadge } from "@/components/due-badge";
+import { PetAvatar } from "@/components/pet-avatar";
 import { useSession } from "@/components/session";
 import { ProgressBar } from "@/components/treatment-progress";
 import { Card, EmptyState, LoadError, Loading } from "@/components/ui";
@@ -17,14 +18,42 @@ export default function HomePage() {
     refreshInterval: 60_000,
   });
 
+  const pending = data?.upcoming.filter((u) => u.daysUntil <= 7).length ?? 0;
+  const treatments = data?.activeTreatments.length ?? 0;
+  const subject = data?.pets.length === 1 ? data.pets[0].name : "Hay";
+  const summary = !data
+    ? " "
+    : pending === 0 && treatments === 0
+      ? "Todo al día. ¡A disfrutar! 🎉"
+      : [
+          pending > 0 && `${pending} ${pending === 1 ? "pendiente" : "pendientes"} esta semana`,
+          treatments > 0 && `${treatments} ${treatments === 1 ? "tratamiento activo" : "tratamientos activos"}`,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
   return (
     <>
-      <div className="mb-6">
-        <p className="text-sm text-muted">
-          {data ? formatLongDate(data.today) : " "}
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Hola, {me.name.split(" ")[0]} 👋</h1>
-      </div>
+      <section className="relative mb-6 min-h-36 overflow-hidden rounded-3xl border border-line bg-primary-soft px-5 py-5 sm:min-h-44 sm:px-7 sm:py-7">
+        <div className="relative z-10 max-w-[58%] sm:max-w-[60%]">
+          <p className="text-sm font-medium text-primary-strong">{data ? formatLongDate(data.today) : " "}</p>
+          <h1 className="mt-0.5 text-2xl font-bold tracking-tight sm:text-3xl">Hola, {me.name.split(" ")[0]} 👋</h1>
+          <p className="mt-1.5 text-sm text-fg/80">
+            {data && subject !== "Hay" && summary !== "Todo al día. ¡A disfrutar! 🎉" ? `${subject}: ` : ""}
+            {summary}
+          </p>
+        </div>
+        <div className="illustration-halo pointer-events-none absolute bottom-1 right-1 top-3 flex w-[44%] items-end justify-end rounded-full sm:right-6 sm:w-[40%]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/theo-burger.webp"
+            alt="Theo comiendo una hamburguesa"
+            width={524}
+            height={375}
+            className="max-h-full w-auto max-w-full object-contain object-bottom"
+          />
+        </div>
+      </section>
 
       {error && <LoadError error={error} retry={() => mutate()} />}
       {!data && !error && <Loading />}
@@ -35,9 +64,7 @@ export default function HomePage() {
             {data.pets.map((pet) => (
               <Link key={pet.id} href={`/mascotas/${pet.id}`}>
                 <Card className="flex items-center gap-4 transition-colors hover:border-primary/50">
-                  <div className="flex size-12 items-center justify-center rounded-2xl bg-primary-soft text-2xl">
-                    🐾
-                  </div>
+                  <PetAvatar pet={pet} />
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">{pet.name}</p>
                     <p className="truncate text-sm text-muted">
@@ -57,7 +84,7 @@ export default function HomePage() {
           <section>
             <h2 className="mb-3 text-lg font-semibold">Próximos 30 días</h2>
             {data.upcoming.length === 0 ? (
-              <EmptyState icon="✅" title="Todo al día">
+              <EmptyState icon="✅" image="/brand/theo-sleeping.webp" title="Todo al día">
                 No hay vacunas, desparasitaciones ni turnos de higiene pendientes.
               </EmptyState>
             ) : (

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { PetAvatar } from "@/components/pet-avatar";
 import { PetFormModal } from "@/components/pet-form";
 import { Button, Card, EmptyState, LoadError, Loading, PageHeader, PlusIcon } from "@/components/ui";
 import { ageFrom, formatDate, kg } from "@/lib/format";
@@ -29,7 +30,7 @@ export default function MascotasPage() {
           <Link key={p.id} href={`/mascotas/${p.id}`}>
             <Card className="h-full transition-colors hover:border-primary/50">
               <div className="flex items-center gap-4">
-                <div className="flex size-14 items-center justify-center rounded-2xl bg-primary-soft text-3xl">🐾</div>
+                <PetAvatar pet={p} className="size-14 text-3xl" />
                 <div className="min-w-0">
                   <p className="text-lg font-semibold">{p.name}</p>
                   <p className="truncate text-sm text-muted">

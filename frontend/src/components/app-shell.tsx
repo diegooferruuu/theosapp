@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import useSWR from "swr";
 import { api, fetcher } from "@/lib/api";
+import { APP_NAME } from "@/lib/brand";
 import type { User } from "@/lib/types";
 import { NavIcon } from "./nav-icons";
 import { SessionProvider } from "./session";
@@ -71,10 +72,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="min-h-dvh lg:flex">
         {/* Barra lateral (escritorio) */}
         <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 lg:flex">
-          <Link href="/" className="mb-6 flex items-center gap-3 px-3">
+          <Link href="/" className="mb-5 flex justify-center" aria-label={`${APP_NAME} · Inicio`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/192" alt="" className="size-9 rounded-xl" />
-            <span className="font-semibold tracking-tight">Theo &amp; Jovero</span>
+            <img
+              src="/brand/logo.webp"
+              alt={APP_NAME}
+              width={534}
+              height={640}
+              className="h-32 w-auto drop-shadow-md transition-transform hover:-rotate-3"
+            />
           </Link>
           <nav className="flex flex-1 flex-col gap-1">
             {items.map((item) => (
@@ -107,7 +113,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-6 lg:px-10 lg:pb-12 lg:pt-8">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 lg:px-10 lg:pb-12 lg:pt-8">
+          {/* Cabecera compacta (móvil) */}
+          <Link href="/" className="mb-4 flex items-center gap-2.5 lg:hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icons/icon-192.png" alt="" width={192} height={192} className="size-9 rounded-xl ring-2 ring-surface" />
+            <span className="text-lg font-bold tracking-tight">{APP_NAME}</span>
+          </Link>
           {children}
         </main>
 

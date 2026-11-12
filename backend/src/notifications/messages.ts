@@ -34,7 +34,7 @@ export function upcomingLine(item: UpcomingItem): string {
 export function upcomingDigest(items: UpcomingItem[]): string {
   const health = items.filter((i) => i.kind === 'HEALTH');
   const grooming = items.filter((i) => i.kind === 'GROOMING');
-  const parts = ['🐾 <b>Recordatorios de Theo &amp; Jovero</b>'];
+  const parts = ['🐾 <b>Theo’s App · Recordatorios</b>'];
   if (health.length) {
     parts.push(
       '',

@@ -236,12 +236,30 @@ export function PageHeader({
   );
 }
 
-export function EmptyState({ icon, title, children }: { icon: string; title: string; children?: ReactNode }) {
+export function EmptyState({
+  icon,
+  image,
+  title,
+  children,
+}: {
+  icon: string;
+  /** Ilustración opcional que reemplaza al emoji. */
+  image?: string;
+  title: string;
+  children?: ReactNode;
+}) {
   return (
     <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line px-6 py-10 text-center">
-      <span className="text-3xl" aria-hidden>
-        {icon}
-      </span>
+      {image ? (
+        <div className="illustration-halo mb-1 rounded-full p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={image} alt="" className="h-auto w-48 sm:w-56" />
+        </div>
+      ) : (
+        <span className="text-3xl" aria-hidden>
+          {icon}
+        </span>
+      )}
       <p className="font-medium">{title}</p>
       {children && <div className="text-sm text-muted">{children}</div>}
     </div>

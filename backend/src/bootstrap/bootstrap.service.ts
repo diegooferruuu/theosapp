@@ -17,7 +17,7 @@ export class BootstrapService implements OnApplicationBootstrap {
       name: process.env.SUPERADMIN_NAME,
     });
     await this.pets.ensureDefaults(
-      (process.env.DEFAULT_PETS ?? 'Theo,Jovero')
+      (process.env.DEFAULT_PETS ?? 'Theo')
         .split(',')
         .map((n) => n.trim())
         .filter(Boolean),

@@ -1,4 +1,4 @@
-# ─── Frontend Theo & Jovero (Next.js, salida standalone) ───
+# ─── Frontend Theo’s App (Next.js, salida standalone) ───
 FROM node:24-slim AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1

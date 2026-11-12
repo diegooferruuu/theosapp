@@ -3,19 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sin conexión · Theo &amp; Jovero</title>
+    <title>Sin conexión · Theo’s App</title>
     <style>
       :root { color-scheme: light dark; }
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, -apple-system, sans-serif; background: #f6f4ef; color: #1f2421; text-align: center; padding: 16px; }
-      @media (prefers-color-scheme: dark) { body { background: #121513; color: #e9ece8; } }
-      button { margin-top: 16px; height: 44px; padding: 0 20px; border: 0; border-radius: 12px; background: #0f766e; color: #fff; font-size: 15px; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, -apple-system, sans-serif; background: #f6f4ef; color: #1f2a44; text-align: center; padding: 16px; box-sizing: border-box; }
+      @media (prefers-color-scheme: dark) { body { background: #121513; color: #e8ebf2; } .halo { background: radial-gradient(closest-side, rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.55) 60%, transparent); } }
+      .halo { display: inline-block; padding: 12px; border-radius: 50%; background: radial-gradient(closest-side, #e7f3d8, transparent); }
+      img { width: min(260px, 70vw); height: auto; display: block; }
+      h1 { font-size: 20px; margin: 16px 0 4px; }
+      p { margin: 0; opacity: 0.75; }
+      button { margin-top: 20px; height: 44px; padding: 0 20px; border: 0; border-radius: 12px; background: #3a7a1f; color: #fff; font-size: 15px; font-weight: 600; }
     </style>
   </head>
   <body>
     <div>
-      <div style="font-size: 40px">🐾</div>
-      <h1 style="font-size: 20px">Sin conexión</h1>
-      <p>Revisa tu internet e inténtalo de nuevo.</p>
+      <div class="halo"><img src="/brand/theo-sleeping.webp" alt="Theo durmiendo" /></div>
+      <h1>Sin conexión</h1>
+      <p>Theo se quedó dormido esperando el internet.</p>
       <button onclick="location.reload()">Reintentar</button>
     </div>
   </body>

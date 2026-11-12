@@ -194,7 +194,7 @@ export class TelegramService
       return this.sendMessage(
         chatId,
         [
-          '🐾 <b>Theo &amp; Jovero</b>',
+          '🐾 <b>Theo’s App</b>',
           'Este chat aún no está vinculado a ninguna cuenta.',
           `Entra a ${escapeHtml(appUrl())} → <b>Mi perfil</b> → <b>Vincular Telegram</b>.`,
           `ID de este chat: <code>${chatId}</code>`,
@@ -254,7 +254,7 @@ export class TelegramService
     this.logger.log(`Usuario ${user.username} vinculado a Telegram`);
     return this.sendMessage(
       chatId,
-      `✅ ¡Listo ${escapeHtml(user.name)}! Recibirás aquí los recordatorios de Theo &amp; Jovero.\nEscribe /ayuda para ver los comandos.`,
+      `✅ ¡Listo ${escapeHtml(user.name)}! Recibirás aquí los recordatorios de Theo’s App.\nEscribe /ayuda para ver los comandos.`,
     );
   }
 }

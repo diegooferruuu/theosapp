@@ -5,11 +5,11 @@
   --surface: #ffffff;
   --surface-2: #f1eee7;
   --line: #e4dfd4;
-  --fg: #1f2421;
-  --muted: #6b6f68;
-  --primary: #0f766e;
-  --primary-strong: #115e59;
-  --primary-soft: #dff3ef;
+  --fg: #1f2a44; /* azul marino del logo */
+  --muted: #656b78;
+  --primary: #3a7a1f; /* verde del logo, 5.3:1 sobre blanco */
+  --primary-strong: #2c5e14;
+  --primary-soft: #e7f3d8;
   --primary-fg: #ffffff;
   --danger: #b42318;
   --danger-soft: #fdecea;
@@ -19,7 +19,7 @@
   --ok-soft: #dcfce7;
   --info: #1d4ed8;
   --info-soft: #e0e7ff;
-  --chart-1: #0d9488; /* validado: banda L, croma y contraste (claro) */
+  --chart-1: #4a9a2c; /* validado: banda L, croma y contraste (claro) */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,12 +28,12 @@
     --surface: #1a1e1c;
     --surface-2: #222724;
     --line: #2f3531;
-    --fg: #e9ece8;
+    --fg: #e8ebf2;
     --muted: #9aa29c;
-    --primary: #2dd4bf;
-    --primary-strong: #5eead4;
-    --primary-soft: #133b37;
-    --primary-fg: #06201d;
+    --primary: #93d35f;
+    --primary-strong: #b7e590;
+    --primary-soft: #1f3316;
+    --primary-fg: #10210a;
     --danger: #f87171;
     --danger-soft: #3b1715;
     --warn: #fbbf24;
@@ -42,7 +42,7 @@
     --ok-soft: #12301d;
     --info: #93c5fd;
     --info-soft: #172449;
-    --chart-1: #10a99a; /* validado contra superficie oscura */
+    --chart-1: #5aa33a; /* validado contra superficie oscura */
   }
 }
 
@@ -88,4 +88,14 @@ textarea {
 input[type="date"],
 input[type="datetime-local"] {
   min-height: 2.75rem;
+}
+
+/* Halo claro detrás de las ilustraciones: mantiene legibles los trazos negros en modo oscuro */
+.illustration-halo {
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.8), rgb(255 255 255 / 0.3) 65%, transparent);
+}
+@media (prefers-color-scheme: light) {
+  .illustration-halo {
+    background: radial-gradient(closest-side, var(--primary-soft), transparent);
+  }
 }

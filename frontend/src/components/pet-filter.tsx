@@ -12,7 +12,9 @@ export function PetFilter({
   value: number | null;
   onChange: (id: number | null) => void;
 }) {
-  const options = [{ id: null, name: "Todas" }, ...(pets ?? [])];
+  // Con una sola mascota el filtro no aporta nada.
+  if (!pets || pets.length < 2) return null;
+  const options = [{ id: null, name: "Todas" }, ...pets];
   return (
     <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1">
       {options.map((p) => (

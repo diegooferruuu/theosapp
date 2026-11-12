@@ -1,4 +1,4 @@
-# Theo & Jovero — stack completo
+# Theo’s App — stack completo
 #   ./scripts/init-env.sh   (o cp .env.example .env y editar)
 #   docker compose up -d --build
 name: theosapp
@@ -37,7 +37,7 @@ services:
       SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-diego}
       SUPERADMIN_NAME: ${SUPERADMIN_NAME:-Diego}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:?Define SUPERADMIN_PASSWORD en .env}
-      DEFAULT_PETS: ${DEFAULT_PETS:-Theo,Jovero}
+      DEFAULT_PETS: ${DEFAULT_PETS:-Theo}
       DAILY_ALERT_HOUR: ${DAILY_ALERT_HOUR:-9}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_POLLING: ${TELEGRAM_POLLING:-true}

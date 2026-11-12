@@ -1,0 +1,88 @@
+# Verifica y despliega Theo’s App en el servidor cada vez que se hace push a main.
+#
+# Configuración en GitHub → Settings → Secrets and variables → Actions:
+#   Secret    DEPLOY_SSH_KEY      clave privada de deploy (solo puede ejecutar el script de deploy)
+#   Variable  DEPLOY_HOST         IP o dominio del servidor
+#   Variable  DEPLOY_USER         usuario SSH (p. ej. ubuntu)
+#   Variable  DEPLOY_KNOWN_HOSTS  huella del servidor (salida de ssh-keyscan)
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Tests y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Backend · build y tests
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+          npm test
+
+      - name: Frontend · tipos y lint
+        working-directory: frontend
+        run: |
+          npm ci
+          npx next typegen
+          npx tsc --noEmit
+          npm run lint
+
+  deploy:
+    name: Desplegar en el servidor
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Comprobar configuración
+        id: config
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ]; then
+            echo "::warning::Faltan DEPLOY_SSH_KEY, DEPLOY_HOST o DEPLOY_KNOWN_HOSTS; no se despliega."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Enviar código y reconstruir
+        if: steps.config.outputs.ready == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER || 'ubuntu' }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # La clave tiene un comando forzado en el servidor: siempre ejecuta deploy.sh
+          git archive --format=tar.gz HEAD | ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 \
+            "$DEPLOY_USER@$DEPLOY_HOST"

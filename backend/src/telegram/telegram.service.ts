@@ -128,7 +128,7 @@ export class TelegramService
     });
     const chats = [...new Set(users.map((u) => u.telegramChatId as string))];
     if (!chats.length) {
-      this.logger.log(`[sin destinatarios vinculados]\n${text}`);
+      this.logger.debug(`[sin chats vinculados]\n${text}`);
       return 0;
     }
     let sent = 0;
@@ -208,7 +208,7 @@ export class TelegramService
         return this.sendMessage(
           chatId,
           items.length
-            ? upcomingDigest(items)
+            ? upcomingDigest(items).html
             : '✅ No hay vencimientos en los próximos 14 días.',
         );
       }

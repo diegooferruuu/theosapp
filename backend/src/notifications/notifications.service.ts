@@ -5,10 +5,10 @@ import { hourIn } from '../common/dates.js';
 import { DashboardService } from '../dashboard/dashboard.service.js';
 import type { UpcomingItem } from '../dashboard/dashboard.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { TelegramService } from '../telegram/telegram.service.js';
 import { dueDoseIndex, doseTimes } from '../treatments/schedule.js';
 import { TreatmentsService } from '../treatments/treatments.service.js';
 import { groomingBucket, healthBucket } from './alerts.js';
+import { NotifierService } from './notifier.service.js';
 import {
   doseMessage,
   treatmentFinishedMessage,
@@ -23,7 +23,7 @@ export class NotificationsService implements OnApplicationBootstrap {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly telegram: TelegramService,
+    private readonly notifier: NotifierService,
     private readonly dashboard: DashboardService,
     private readonly treatments: TreatmentsService,
   ) {}
@@ -77,10 +77,10 @@ export class NotificationsService implements OnApplicationBootstrap {
 
       const items = pending.map((p) => p.item);
       const message = upcomingDigest(items);
-      const recipients = await this.telegram.broadcast(message);
+      const recipients = await this.notifier.broadcast(message);
       await this.markSent(
         pending.map((p) => p.key),
-        message,
+        message.html,
         recipients,
       );
       this.logger.log(
@@ -109,8 +109,8 @@ export class NotificationsService implements OnApplicationBootstrap {
         const message = treatmentFinishedMessage({ ...t, pet });
         await this.markSent(
           [key],
-          message,
-          await this.telegram.broadcast(message),
+          message.html,
+          await this.notifier.broadcast(message),
         );
       }
 
@@ -132,8 +132,8 @@ export class NotificationsService implements OnApplicationBootstrap {
         });
         await this.markSent(
           [key],
-          message,
-          await this.telegram.broadcast(message),
+          message.html,
+          await this.notifier.broadcast(message),
         );
       }
     } catch (e) {
@@ -148,12 +148,12 @@ export class NotificationsService implements OnApplicationBootstrap {
   }
 
   /**
-   * Registra los avisos como enviados. Si el bot está configurado pero nadie
-   * recibió el mensaje (sin usuarios vinculados o error de red) no se marca,
-   * para reintentarlo en la siguiente pasada.
+   * Registra los avisos como enviados. Si hay algún canal configurado pero
+   * nadie recibió el mensaje (sin usuarios vinculados o error de red) no se
+   * marca, para reintentarlo en la siguiente pasada.
    */
   private async markSent(keys: string[], message: string, recipients: number) {
-    if (this.telegram.enabled && recipients === 0) return;
+    if (this.notifier.anyChannel && recipients === 0) return;
     await this.prisma.notificationLog.createMany({
       data: keys.map((key) => ({ key, message, recipients })),
       skipDuplicates: true,

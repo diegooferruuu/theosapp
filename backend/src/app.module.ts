@@ -11,6 +11,7 @@ import { HealthRecordsModule } from './health-records/health-records.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { PetsModule } from './pets/pets.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { PushModule } from './push/push.module.js';
 import { TelegramModule } from './telegram/telegram.module.js';
 import { TreatmentsModule } from './treatments/treatments.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -33,6 +34,7 @@ import { WeightsModule } from './weights/weights.module.js';
     WeightsModule,
     DashboardModule,
     TelegramModule,
+    PushModule,
     NotificationsModule,
   ],
   controllers: [HealthController],

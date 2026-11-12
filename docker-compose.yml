@@ -41,15 +41,25 @@ services:
       DAILY_ALERT_HOUR: ${DAILY_ALERT_HOUR:-9}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_POLLING: ${TELEGRAM_POLLING:-true}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+    # Alias únicos: si nginx se une a la red de otro proyecto (p. ej. para que
+    # otro proxy lo sirva por HTTPS), nombres genéricos como "backend" podrían
+    # resolver a contenedores ajenos.
+    networks:
+      default:
+        aliases: [theosapp-backend]
 
   frontend:
     build:
       context: ./frontend
       args:
-        API_URL: http://backend:3001
+        API_URL: http://theosapp-backend:3001
     restart: unless-stopped
     depends_on:
       - backend
+    networks:
+      default:
+        aliases: [theosapp-frontend]
 
   nginx:
     build: ./nginx

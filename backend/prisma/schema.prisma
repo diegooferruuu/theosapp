@@ -35,10 +35,11 @@ model User {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  healthRecords HealthRecord[]
-  treatments    MedicationTreatment[]
-  groomingLogs  GroomingLog[]
-  vetVisits     VetVisit[]
+  healthRecords     HealthRecord[]
+  treatments        MedicationTreatment[]
+  groomingLogs      GroomingLog[]
+  vetVisits         VetVisit[]
+  pushSubscriptions PushSubscription[]
 
   @@map("users")
 }
@@ -205,4 +206,30 @@ model NotificationLog {
   sentAt     DateTime @default(now()) @map("sent_at")
 
   @@map("notification_logs")
+}
+
+/// Suscripción Web Push de un dispositivo (PWA instalada o navegador).
+model PushSubscription {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+/// Ajustes internos de la aplicación (p. ej. claves VAPID generadas).
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
 }

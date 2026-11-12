@@ -41,8 +41,16 @@ cp "$APP/scripts/server-deploy.sh" "$BASE/deploy.sh.tmp"
 chmod 755 "$BASE/deploy.sh.tmp"
 mv "$BASE/deploy.sh.tmp" "$BASE/deploy.sh"
 
+# Ajustes propios del servidor (no versionados), p. ej. unir nginx a la red de otro proxy.
+OVERRIDE="$BASE/docker-compose.override.yml"
+compose() {
+  local files=(-f docker-compose.yml)
+  [ -f "$OVERRIDE" ] && files+=(-f "$OVERRIDE")
+  (cd "$APP" && docker compose --env-file "$ENV_FILE" -p "$PROJECT" "${files[@]}" "$@")
+}
+
 up() {
-  (cd "$APP" && docker compose --env-file "$ENV_FILE" -p "$PROJECT" up -d --build --remove-orphans)
+  compose up -d --build --remove-orphans
 }
 
 healthy() {
@@ -61,7 +69,7 @@ if up && healthy; then
 fi
 
 echo "✘ La nueva versión no respondió."
-(cd "$APP" && docker compose -p "$PROJECT" logs --tail 80 backend) || true
+compose logs --tail 80 backend || true
 if [ -d "$BASE/app.old" ]; then
   echo "↩ Volviendo a la versión anterior…"
   rm -rf "$BASE/app.failed"

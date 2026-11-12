@@ -28,6 +28,16 @@ docker-compose.yml
 - **Usuario:** ver y registrar todo lo del módulo veterinario, editar su perfil y vincular su Telegram.
 - La sesión es un JWT en cookie `httpOnly` (30 días por defecto). Cambiar la contraseña, desactivar un usuario o cambiarle el rol cierra sus sesiones.
 
+## Notificaciones push (PWA)
+
+Cada persona las activa en **Mi perfil → Notificaciones en este dispositivo**. Llegan los mismos avisos que por Telegram (recordatorios diarios, cada toma de medicamento y fin de tratamiento), aunque la app esté cerrada. Al tocar una notificación se abre la sección correspondiente.
+
+- Requieren HTTPS.
+- **iPhone (iOS 16.4+):** primero hay que instalar la app (*Compartir → Añadir a pantalla de inicio*) y activarlas desde ahí.
+- **Android y escritorio:** se activan desde el navegador.
+- Las claves VAPID se generan solas la primera vez y se guardan en la base (`app_settings`). Si se prefiere, se pueden fijar con `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`.
+- Los dispositivos que desinstalan la app o revocan el permiso se eliminan solos.
+
 ## Bot de Telegram
 
 1. Crea un bot con [@BotFather](https://t.me/BotFather) y copia el token en `TELEGRAM_BOT_TOKEN`.
@@ -51,9 +61,13 @@ Sin token, la app funciona igual y los mensajes se escriben en el log del backen
 └── deploy.log    historial de despliegues
 ```
 
-- Proyecto Compose `theosapp`, con red y volumen propios. Convive con los otros proyectos del servidor sin compartir nada.
-- El único puerto publicado es `HTTP_PORT` (18473). La base de datos no se expone.
-- En OCI hay que permitir ese puerto en la *Security List* de la VCN: regla de ingreso TCP 18473 desde `0.0.0.0/0`.
+- URL: **https://theo.152-67-46-104.sslip.io**.
+- El HTTPS lo da el Caddy del proyecto *alertas*, que ya ocupa los puertos 80 y 443. Al final de `~/alertas/deploy/Caddyfile` hay un bloque `theo.152-67-46-104.sslip.io { reverse_proxy theosapp-nginx:80 }`.
+- `~/theosapp/docker-compose.override.yml`, que solo existe en el servidor y que `deploy.sh` aplica, hace dos cosas:
+  - une el nginx de Theo a la red `alertas-beta_default` con el alias `theosapp-nginx`;
+  - deja el puerto 18473 escuchando solo en `127.0.0.1`, para la comprobación de salud.
+- La base de datos, el backend y el frontend no se exponen ni se conectan a la red de alertas.
+- Proyecto Compose `theosapp`, con red y volumen propios.
 
 ### Despliegue automático (GitHub Actions)
 

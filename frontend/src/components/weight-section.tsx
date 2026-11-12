@@ -189,7 +189,7 @@ function WeightFormModal({
             {(id) => <PetSelect id={id} pets={pets} value={f.petId} onChange={(v) => setF({ ...f, petId: v })} />}
           </Field>
         )}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Fecha">
             {(id) => (
               <Input id={id} type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} required />

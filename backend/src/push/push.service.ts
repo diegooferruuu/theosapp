@@ -7,7 +7,7 @@ import {
 } from 'web-push';
 import type { Prisma } from '../generated/prisma/client.js';
 import { appUrl } from '../common/config.js';
-import type { AppNotification } from '../notifications/app-notification.js';
+import type { AppNotification } from '../notifier/app-notification.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { PushSubscribeDto } from './push.dto.js';
 
@@ -30,7 +30,9 @@ export class PushService implements OnModuleInit {
       const keys = await this.loadKeys();
       const subject =
         process.env.VAPID_SUBJECT ||
-        (appUrl().startsWith('https://') ? appUrl() : 'mailto:avisos@theosapp.app');
+        (appUrl().startsWith('https://')
+          ? appUrl()
+          : 'mailto:avisos@theosapp.app');
       setVapidDetails(subject, keys.publicKey, keys.privateKey);
       this.publicKey = keys.publicKey;
     } catch (e) {
@@ -77,7 +79,9 @@ export class PushService implements OnModuleInit {
   }
 
   async unsubscribe(userId: number, endpoint: string) {
-    await this.prisma.pushSubscription.deleteMany({ where: { userId, endpoint } });
+    await this.prisma.pushSubscription.deleteMany({
+      where: { userId, endpoint },
+    });
     return { ok: true };
   }
 
@@ -86,9 +90,12 @@ export class PushService implements OnModuleInit {
   }
 
   /** Envía a todos los dispositivos de los usuarios que aceptan avisos. */
-  broadcast(n: AppNotification): Promise<number> {
+  broadcast(n: AppNotification, exceptUserId?: number): Promise<number> {
     return this.sendWhere(
-      { user: { active: true, notificationsEnabled: true } },
+      {
+        user: { active: true, notificationsEnabled: true },
+        ...(exceptUserId ? { userId: { not: exceptUserId } } : {}),
+      },
       n,
     );
   }
@@ -116,7 +123,11 @@ export class PushService implements OnModuleInit {
         sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           payload,
-          { TTL: n.ttl ?? 12 * 3600, urgency: n.urgency ?? 'normal', timeout: 15_000 },
+          {
+            TTL: n.ttl ?? 12 * 3600,
+            urgency: n.urgency ?? 'normal',
+            timeout: 15_000,
+          },
         ),
       ),
     );
@@ -141,8 +152,12 @@ export class PushService implements OnModuleInit {
       }
     });
     if (expired.length) {
-      await this.prisma.pushSubscription.deleteMany({ where: { id: { in: expired } } });
-      this.logger.log(`${expired.length} suscripción(es) vencida(s) eliminada(s)`);
+      await this.prisma.pushSubscription.deleteMany({
+        where: { id: { in: expired } },
+      });
+      this.logger.log(
+        `${expired.length} suscripción(es) vencida(s) eliminada(s)`,
+      );
     }
     if (ok.length) {
       await this.prisma.pushSubscription.updateMany({

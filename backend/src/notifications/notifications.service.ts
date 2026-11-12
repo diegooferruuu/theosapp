@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { dueDoseIndex, doseTimes } from '../treatments/schedule.js';
 import { TreatmentsService } from '../treatments/treatments.service.js';
 import { groomingBucket, healthBucket } from './alerts.js';
-import { NotifierService } from './notifier.service.js';
+import { NotifierService } from '../notifier/notifier.service.js';
 import {
   doseMessage,
   treatmentFinishedMessage,
@@ -80,7 +80,7 @@ export class NotificationsService implements OnApplicationBootstrap {
       const recipients = await this.notifier.broadcast(message);
       await this.markSent(
         pending.map((p) => p.key),
-        message.html,
+        message.body,
         recipients,
       );
       this.logger.log(
@@ -109,7 +109,7 @@ export class NotificationsService implements OnApplicationBootstrap {
         const message = treatmentFinishedMessage({ ...t, pet });
         await this.markSent(
           [key],
-          message.html,
+          message.body,
           await this.notifier.broadcast(message),
         );
       }
@@ -123,6 +123,10 @@ export class NotificationsService implements OnApplicationBootstrap {
         if (index === null) continue;
         const key = `dose:${t.id}:${t.startAt.getTime()}:${t.frequencyHours}:${index}`;
         if (await this.wasSent(key)) continue;
+        const alreadyGiven = await this.prisma.medicationDose.count({
+          where: { treatmentId: t.id, doseNumber: index + 1 },
+        });
+        if (alreadyGiven) continue; // alguien ya se la dio (p. ej. un poco antes)
         const doses = doseTimes(t);
         const message = doseMessage({
           ...t,
@@ -132,7 +136,7 @@ export class NotificationsService implements OnApplicationBootstrap {
         });
         await this.markSent(
           [key],
-          message.html,
+          message.body,
           await this.notifier.broadcast(message),
         );
       }

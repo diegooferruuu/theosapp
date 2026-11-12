@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import useSWR from "swr";
+import { DoseStatus } from "@/components/dose-status";
 import { DueBadge } from "@/components/due-badge";
 import { PetAvatar } from "@/components/pet-avatar";
 import { PetFormModal } from "@/components/pet-form";
@@ -12,7 +13,7 @@ import { ProgressBar } from "@/components/treatment-progress";
 import { Button, Card, EmptyState, LoadError, Loading } from "@/components/ui";
 import { WeightChart, weightTrend } from "@/components/weight-chart";
 import { api, fetcher } from "@/lib/api";
-import { ageFrom, formatDate, formatDateTime, kg } from "@/lib/format";
+import { ageFrom, formatDate, kg } from "@/lib/format";
 import { groomingIcon, groomingLabel, healthIcon, healthLabel } from "@/lib/labels";
 import type { GroomingLog, HealthRecord, Pet, Treatment, VetVisit, WeightRecord } from "@/lib/types";
 
@@ -24,7 +25,10 @@ export default function PetDetailPage() {
   const { data: pet, error, mutate } = useSWR<Pet>(`/pets/${id}`, fetcher);
   const { data: health } = useSWR<HealthRecord[]>(`/health-records?petId=${id}`, fetcher);
   const { data: grooming } = useSWR<GroomingLog[]>(`/grooming?petId=${id}`, fetcher);
-  const { data: treatments } = useSWR<Treatment[]>(`/treatments?petId=${id}&status=ACTIVE`, fetcher);
+  const { data: treatments, mutate: mutateTreatments } = useSWR<Treatment[]>(
+    `/treatments?petId=${id}&status=ACTIVE`,
+    fetcher,
+  );
   const { data: visits } = useSWR<VetVisit[]>(`/vet-visits?petId=${id}`, fetcher);
   const { data: weights } = useSWR<WeightRecord[]>(`/weights?petId=${id}`, fetcher);
 
@@ -162,13 +166,8 @@ export default function PetDetailPage() {
                   <p className="font-medium">
                     {t.medicineName} · {t.dosage}
                   </p>
-                  <ProgressBar progress={t.progress} />
-                  <p className="text-sm text-muted">
-                    Próxima toma:{" "}
-                    <span>
-                      {t.progress.nextDoseAt ? formatDateTime(t.progress.nextDoseAt) : "—"}
-                    </span>
-                  </p>
+                  <ProgressBar value={t.givenCount} total={t.progress.totalDoses} />
+                  <DoseStatus treatment={t} onChange={() => mutateTreatments()} />
                 </Card>
               ))}
             </div>

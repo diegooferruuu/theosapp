@@ -53,7 +53,7 @@ export function PetFormModal({
         <Field label="Nombre">
           {(id) => <Input id={id} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />}
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Especie">
             {(id) => (
               <>
@@ -75,7 +75,7 @@ export function PetFormModal({
             {(id) => <Input id={id} value={f.breed} onChange={(e) => setF({ ...f, breed: e.target.value })} />}
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Fecha de nacimiento">
             {(id) => (
               <Input id={id} type="date" value={f.birthDate} onChange={(e) => setF({ ...f, birthDate: e.target.value })} />

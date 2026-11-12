@@ -53,3 +53,28 @@ export function dueDoseIndex(
   }
   return null;
 }
+
+/** Minutos antes de la hora en que ya se puede marcar una toma como dada. */
+export const EARLY_GIVE_MINUTES = 60;
+
+/**
+ * Toma "actual": la más reciente cuya hora ya llegó (o llega dentro de la
+ * ventana de anticipación). Antes de empezar, la primera toma.
+ */
+export function currentDose(t: TreatmentTiming, now = new Date()) {
+  const doses = doseTimes(t);
+  const limit = now.getTime() + EARLY_GIVE_MINUTES * 60_000;
+  let index = 0;
+  for (let i = doses.length - 1; i >= 0; i--) {
+    if (doses[i].getTime() <= limit) {
+      index = i;
+      break;
+    }
+  }
+  return {
+    number: index + 1,
+    at: doses[index],
+    /** Se puede marcar como dada ahora mismo. */
+    canGive: doses[index].getTime() <= limit,
+  };
+}

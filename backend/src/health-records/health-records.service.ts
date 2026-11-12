@@ -5,7 +5,15 @@ import {
 } from '@nestjs/common';
 import type { HealthRecord } from '../generated/prisma/client.js';
 import { appTimezone } from '../common/config.js';
-import { parseDateOnly, todayIn } from '../common/dates.js';
+import {
+  daysBetween,
+  parseDateOnly,
+  todayIn,
+  toDateOnly,
+} from '../common/dates.js';
+import type { AuthUser } from '../common/decorators.js';
+import { healthGivenMessage } from '../notifications/messages.js';
+import { NotifierService } from '../notifier/notifier.service.js';
 import {
   computeDue,
   normalizeName,
@@ -32,6 +40,7 @@ export class HealthRecordsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pets: PetsService,
+    private readonly notifier: NotifierService,
   ) {}
 
   async list(query: HealthRecordQueryDto) {
@@ -52,12 +61,12 @@ export class HealthRecordsService {
     }));
   }
 
-  async create(dto: CreateHealthRecordDto, userId: number) {
+  async create(dto: CreateHealthRecordDto, user: AuthUser) {
     await this.pets.ensureExists(dto.petId);
     const dateGiven = parseDateOnly(dto.dateGiven);
     const nextDueDate = dto.nextDueDate ? parseDateOnly(dto.nextDueDate) : null;
     this.checkDates(dateGiven, nextDueDate);
-    return this.prisma.healthRecord.create({
+    const record = await this.prisma.healthRecord.create({
       data: {
         petId: dto.petId,
         type: dto.type,
@@ -65,10 +74,25 @@ export class HealthRecordsService {
         dateGiven,
         nextDueDate,
         notes: dto.notes ?? null,
-        createdById: userId,
+        createdById: user.id,
       },
       include,
     });
+
+    // Si se aplicó hoy o ayer, avisa al resto para que nadie la repita.
+    const daysAgo = daysBetween(
+      toDateOnly(record.dateGiven),
+      todayIn(appTimezone()),
+    );
+    if (daysAgo >= 0 && daysAgo <= 1) {
+      await this.notifier.broadcast(
+        healthGivenMessage({ ...record, givenBy: user.name }),
+        {
+          exceptUserId: user.id,
+        },
+      );
+    }
+    return record;
   }
 
   async update(id: number, dto: UpdateHealthRecordDto) {

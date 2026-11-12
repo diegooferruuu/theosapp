@@ -34,7 +34,6 @@ interface FormState {
   role: Role;
   active: boolean;
   notificationsEnabled: boolean;
-  telegramChatId: string;
 }
 
 export default function UsuariosPage() {
@@ -60,7 +59,7 @@ export default function UsuariosPage() {
     <>
       <PageHeader
         title="Usuarios"
-        description="Quién puede entrar a la app y recibir avisos por Telegram."
+        description="Quién puede entrar a la app y recibir avisos."
         action={
           <Button
             onClick={() =>
@@ -71,7 +70,6 @@ export default function UsuariosPage() {
                 role: "USER",
                 active: true,
                 notificationsEnabled: true,
-                telegramChatId: "",
               })
             }
           >
@@ -95,7 +93,7 @@ export default function UsuariosPage() {
                 {!u.active && <Badge tone="danger">Inactivo</Badge>}
               </div>
               <p className="text-sm text-muted">
-                @{u.username} · Telegram {u.telegramChatId ? "✓ vinculado" : "sin vincular"}
+                @{u.username} · {pushLabel(u._count?.pushSubscriptions ?? 0)}
                 {!u.notificationsEnabled && " · avisos apagados"}
               </p>
               <p className="text-xs text-muted">
@@ -114,7 +112,6 @@ export default function UsuariosPage() {
                     role: u.role,
                     active: u.active,
                     notificationsEnabled: u.notificationsEnabled,
-                    telegramChatId: u.telegramChatId ?? "",
                   })
                 }
               >
@@ -172,7 +169,6 @@ function UserForm({
         name: f.name,
         username: f.username,
         role: f.role,
-        telegramChatId: f.telegramChatId,
       };
       if (f.password) body.password = f.password;
       if (f.id) {
@@ -229,16 +225,6 @@ function UserForm({
               </Select>
             )}
           </Field>
-          <Field label="Chat ID de Telegram" hint="Opcional: el usuario puede vincularse desde su perfil">
-            {(id) => (
-              <Input
-                id={id}
-                inputMode="numeric"
-                value={f.telegramChatId}
-                onChange={(e) => set("telegramChatId", e.target.value)}
-              />
-            )}
-          </Field>
         </div>
         {f.id && (
           <div className="flex flex-col gap-2">
@@ -251,7 +237,7 @@ function UserForm({
               />
             )}
             <Checkbox
-              label="Recibir avisos por Telegram"
+              label="Recibir notificaciones"
               checked={f.notificationsEnabled}
               onChange={(v) => set("notificationsEnabled", v)}
             />
@@ -317,10 +303,9 @@ function NotificationsPanel() {
                 {formatDateTime(log.sentAt)} · {log.recipients} chat(s)
               </span>
             </summary>
-            <p
-              className="mt-2 whitespace-pre-line rounded-lg bg-surface-2 p-2 text-sm"
-              dangerouslySetInnerHTML={{ __html: sanitizeTelegramHtml(log.message) }}
-            />
+            <p className="mt-2 whitespace-pre-line rounded-lg bg-surface-2 p-2 text-sm">
+              {log.message}
+            </p>
           </details>
         ))}
       </Card>
@@ -328,9 +313,7 @@ function NotificationsPanel() {
   );
 }
 
-/** El mensaje guardado es HTML de Telegram (b/i/code); solo dejamos esas etiquetas. */
-function sanitizeTelegramHtml(html: string): string {
-  return html
-    .replace(/&(?!(amp|lt|gt|quot);)/g, "&amp;")
-    .replace(/<(?!\/?(b|i|code)>)/g, "&lt;");
+function pushLabel(n: number): string {
+  if (n === 0) return "sin notificaciones activadas";
+  return `🔔 ${n} ${n === 1 ? "dispositivo" : "dispositivos"}`;
 }

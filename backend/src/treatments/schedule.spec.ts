@@ -1,4 +1,5 @@
 import {
+  currentDose,
   doseTimes,
   dueDoseIndex,
   treatmentEnd,
@@ -37,5 +38,24 @@ describe('schedule', () => {
     expect(dueDoseIndex(t, at(0))).toBe(0);
     expect(dueDoseIndex(t, at(8.25))).toBe(1);
     expect(dueDoseIndex(t, at(9))).toBeNull(); // pasó el margen de 30 min
+  });
+});
+
+describe('toma actual', () => {
+  it('antes de empezar es la primera, y se puede dar 1 h antes', () => {
+    expect(currentDose(t, at(-3))).toMatchObject({ number: 1, canGive: false });
+    expect(currentDose(t, at(-0.5))).toMatchObject({
+      number: 1,
+      canGive: true,
+    });
+  });
+
+  it('pasa a la siguiente cuando falta menos de 1 h', () => {
+    expect(currentDose(t, at(6))).toMatchObject({ number: 1 });
+    expect(currentDose(t, at(7.5))).toMatchObject({ number: 2, canGive: true });
+  });
+
+  it('al final queda en la última toma', () => {
+    expect(currentDose(t, at(500))).toMatchObject({ number: 21 });
   });
 });

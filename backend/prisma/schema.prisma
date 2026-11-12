@@ -25,9 +25,6 @@ model User {
   passwordHash          String    @map("password_hash")
   role                  Role      @default(USER)
   active                Boolean   @default(true)
-  telegramChatId        String?   @map("telegram_chat_id")
-  telegramLinkCode      String?   @unique @map("telegram_link_code")
-  telegramLinkExpiresAt DateTime? @map("telegram_link_expires_at")
   notificationsEnabled  Boolean   @default(true) @map("notifications_enabled")
   /// Se incrementa al cambiar contraseña o desactivar el usuario para invalidar sesiones.
   tokenVersion          Int       @default(0) @map("token_version")
@@ -40,6 +37,7 @@ model User {
   groomingLogs      GroomingLog[]
   vetVisits         VetVisit[]
   pushSubscriptions PushSubscription[]
+  dosesGiven        MedicationDose[]
 
   @@map("users")
 }
@@ -119,12 +117,31 @@ model MedicationTreatment {
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
 
-  pet       Pet   @relation(fields: [petId], references: [id], onDelete: Cascade)
-  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  pet       Pet              @relation(fields: [petId], references: [id], onDelete: Cascade)
+  createdBy User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  doses     MedicationDose[]
 
   @@index([petId])
   @@index([status])
   @@map("medication_treatments")
+}
+
+/// Toma marcada como dada: evita que se le dé dos veces y avisa a los demás.
+model MedicationDose {
+  id          Int      @id @default(autoincrement())
+  treatmentId Int      @map("treatment_id")
+  /// Número de toma (1 = primera), según el horario calculado.
+  doseNumber  Int      @map("dose_number")
+  scheduledAt DateTime @map("scheduled_at")
+  givenAt     DateTime @default(now()) @map("given_at")
+  givenById   Int?     @map("given_by_id")
+  notes       String?
+
+  treatment MedicationTreatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  givenBy   User?               @relation(fields: [givenById], references: [id], onDelete: SetNull)
+
+  @@unique([treatmentId, doseNumber])
+  @@map("medication_doses")
 }
 
 // ───────────────────────── Higiene y estética ─────────────────────────

@@ -1,11 +1,8 @@
-/** Un aviso listo para enviarse por cualquier canal. */
+/** Un aviso listo para enviarse como notificación push. */
 export interface AppNotification {
-  /** Título de la notificación push. */
   title: string;
-  /** Texto plano para la notificación push. */
+  /** Texto plano (puede tener saltos de línea). */
   body: string;
-  /** Versión HTML para Telegram. */
-  html: string;
   /** Ruta de la app que se abre al tocar la notificación. */
   url: string;
   /** Las notificaciones con la misma etiqueta se reemplazan entre sí. */

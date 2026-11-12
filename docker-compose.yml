@@ -39,8 +39,6 @@ services:
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:?Define SUPERADMIN_PASSWORD en .env}
       DEFAULT_PETS: ${DEFAULT_PETS:-Theo}
       DAILY_ALERT_HOUR: ${DAILY_ALERT_HOUR:-9}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_POLLING: ${TELEGRAM_POLLING:-true}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     # Alias únicos: si nginx se une a la red de otro proyecto (p. ej. para que
     # otro proxy lo sirva por HTTPS), nombres genéricos como "backend" podrían

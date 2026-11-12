@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import useSWR from "swr";
+import { DoseStatus } from "@/components/dose-status";
 import { DueBadge } from "@/components/due-badge";
 import { PetAvatar } from "@/components/pet-avatar";
 import { useSession } from "@/components/session";
 import { ProgressBar } from "@/components/treatment-progress";
 import { Card, EmptyState, LoadError, Loading } from "@/components/ui";
 import { fetcher } from "@/lib/api";
-import { ageFrom, formatDate, formatDateTime, formatLongDate, kg } from "@/lib/format";
+import { ageFrom, formatDate, formatLongDate, kg } from "@/lib/format";
 import { itemIcon } from "@/lib/labels";
 import type { Dashboard } from "@/lib/types";
 
@@ -120,25 +121,18 @@ export default function HomePage() {
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
                 {data.activeTreatments.map((t) => (
-                  <Link key={t.id} href="/tratamientos">
-                    <Card className="flex flex-col gap-3 transition-colors hover:border-primary/50">
-                      <div>
-                        <p className="font-semibold">
-                          {t.pet.name} · {t.medicineName}
-                        </p>
-                        <p className="text-sm text-muted">
-                          {t.dosage} · cada {t.frequencyHours} h
-                        </p>
-                      </div>
-                      <ProgressBar progress={t.progress} />
-                      <p className="text-sm">
-                        <span className="text-muted">Próxima toma: </span>
-                        <span className="font-medium">
-                          {t.progress.nextDoseAt ? formatDateTime(t.progress.nextDoseAt) : "—"}
-                        </span>
+                  <Card key={t.id} className="flex flex-col gap-3">
+                    <Link href="/tratamientos" className="group">
+                      <p className="font-semibold group-hover:text-primary">
+                        {t.pet.name} · {t.medicineName}
                       </p>
-                    </Card>
-                  </Link>
+                      <p className="text-sm text-muted">
+                        {t.dosage} · cada {t.frequencyHours} h
+                      </p>
+                    </Link>
+                    <ProgressBar value={t.givenCount} total={t.progress.totalDoses} />
+                    <DoseStatus treatment={t} onChange={() => mutate()} />
+                  </Card>
                 ))}
               </div>
             )}

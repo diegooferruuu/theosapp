@@ -85,9 +85,25 @@ textarea {
   font-size: 16px; /* evita zoom automático en iOS */
 }
 
+/* Campos de fecha: en iPhone tienen un ancho mínimo propio que desborda el
+   formulario; se les quita y ocupan solo el ancho disponible. */
 input[type="date"],
 input[type="datetime-local"] {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   min-height: 2.75rem;
+}
+input::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.5em;
+}
+@supports (-webkit-touch-callout: none) {
+  input[type="date"],
+  input[type="datetime-local"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
 }
 
 /* Halo claro detrás de las ilustraciones: mantiene legibles los trazos negros en modo oscuro */

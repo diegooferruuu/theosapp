@@ -7,7 +7,7 @@ import { GROOMING_TYPE_LABEL, HEALTH_TYPE_LABEL } from '../common/labels.js';
 import { groomingGroupKey } from '../grooming/grooming.service.js';
 import { healthGroupKey } from '../health-records/health-records.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { treatmentProgress } from '../treatments/schedule.js';
+import { TreatmentsService } from '../treatments/treatments.service.js';
 
 export interface UpcomingItem {
   kind: 'HEALTH' | 'GROOMING';
@@ -24,7 +24,10 @@ export interface UpcomingItem {
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly treatments: TreatmentsService,
+  ) {}
 
   /** Próximos vencimientos (incluye vencidos) dentro de `days` días. */
   async upcoming(days = 30): Promise<UpcomingItem[]> {
@@ -89,19 +92,12 @@ export class DashboardService {
   }
 
   async activeTreatments() {
-    const now = new Date();
-    const treatments = await this.prisma.medicationTreatment.findMany({
-      where: { status: 'ACTIVE' },
-      include: { pet: { select: { id: true, name: true } } },
-      orderBy: { startAt: 'asc' },
-    });
-    return treatments
-      .map((t) => ({ ...t, progress: treatmentProgress(t, now) }))
-      .sort(
-        (a, b) =>
-          (a.progress.nextDoseAt?.getTime() ?? Infinity) -
-          (b.progress.nextDoseAt?.getTime() ?? Infinity),
-      );
+    const treatments = await this.treatments.list({ status: 'ACTIVE' });
+    return treatments.sort(
+      (a, b) =>
+        (a.progress.nextDoseAt?.getTime() ?? Infinity) -
+        (b.progress.nextDoseAt?.getTime() ?? Infinity),
+    );
   }
 
   async summary() {

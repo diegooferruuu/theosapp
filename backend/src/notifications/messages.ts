@@ -1,13 +1,14 @@
 import { appTimezone } from '../common/config.js';
 import {
-  formatDate,
-  formatDateTime,
   formatTime,
   relativeDays,
+  todayIn,
+  toDateOnly,
+  daysBetween,
 } from '../common/dates.js';
-import { escapeHtml } from '../common/labels.js';
+import { HEALTH_TYPE_LABEL } from '../common/labels.js';
 import type { UpcomingItem } from '../dashboard/dashboard.service.js';
-import type { AppNotification } from './app-notification.js';
+import type { AppNotification } from '../notifier/app-notification.js';
 
 const ICON: Record<string, string> = {
   VACCINE: '💉',
@@ -19,7 +20,7 @@ const ICON: Record<string, string> = {
   DENTAL_CLEANING: '🦷',
 };
 
-const icon = (item: UpcomingItem) => ICON[item.type] ?? '•';
+const icon = (type: string) => ICON[type] ?? '•';
 
 function when(item: UpcomingItem): string {
   const rel = relativeDays(item.daysUntil);
@@ -27,76 +28,79 @@ function when(item: UpcomingItem): string {
 }
 
 export function upcomingLine(item: UpcomingItem): string {
-  const rel = when(item);
-  const whenHtml = item.daysUntil <= 1 ? `<b>${rel}</b>` : rel;
   const what =
     item.kind === 'HEALTH'
-      ? `${escapeHtml(item.title)} <i>(${item.subtitle.toLowerCase()})</i>`
-      : escapeHtml(item.title);
-  const overdue = item.daysUntil < 0 ? '⚠️ ' : '';
-  return `${overdue}${icon(item)} <b>${escapeHtml(item.petName)}</b> — ${what}: ${whenHtml} (${formatDate(item.dueDate)})`;
+      ? `${item.title} (${item.subtitle.toLowerCase()})`
+      : item.title;
+  return `${item.daysUntil < 0 ? '⚠️' : icon(item.type)} ${item.petName} · ${what}: ${when(item)}`;
 }
 
-/** Línea en texto plano para notificaciones push. */
-export function upcomingPlainLine(item: UpcomingItem): string {
-  const what =
-    item.kind === 'HEALTH' ? `${item.title} (${item.subtitle.toLowerCase()})` : item.title;
-  return `${item.daysUntil < 0 ? '⚠️' : icon(item)} ${item.petName} · ${what}: ${when(item)}`;
-}
-
+/** Resumen diario de vacunas, desparasitaciones e higiene. */
 export function upcomingDigest(items: UpcomingItem[]): AppNotification {
-  const health = items.filter((i) => i.kind === 'HEALTH');
-  const grooming = items.filter((i) => i.kind === 'GROOMING');
-  const parts = ['🐾 <b>Theo’s App · Recordatorios</b>'];
-  if (health.length) {
-    parts.push('', '<b>Vacunas y desparasitaciones</b>', ...health.map(upcomingLine));
-  }
-  if (grooming.length) {
-    parts.push('', '<b>Higiene</b>', ...grooming.map(upcomingLine));
-  }
-
-  const lines = items.slice(0, 4).map(upcomingPlainLine);
+  const lines = items.slice(0, 4).map(upcomingLine);
   if (items.length > 4) lines.push(`y ${items.length - 4} más…`);
   const single = items.length === 1 ? items[0] : null;
   return {
     title: single
-      ? `${icon(single)} ${single.petName}: ${single.title}`
+      ? `${icon(single.type)} ${single.petName}: ${single.title}`
       : `🐾 ${items.length} recordatorios de cuidado`,
-    body: single ? upcomingPlainLine(single).replace(/^\S+ /, '') : lines.join('\n'),
-    html: parts.join('\n'),
+    body: single ? upcomingLine(single).replace(/^\S+ /, '') : lines.join('\n'),
     url: single?.kind === 'GROOMING' ? '/higiene' : single ? '/vacunas' : '/',
     tag: 'recordatorios',
     ttl: 12 * 3600,
+    urgency: 'high',
   };
 }
 
-export function doseMessage(t: {
+interface TreatmentInfo {
   id: number;
   medicineName: string;
   dosage: string;
   pet: { name: string };
-  doseNumber: number;
-  totalDoses: number;
-  at: Date;
-  notes?: string | null;
-}): AppNotification {
+}
+
+/** Recordatorio a la hora de una toma. */
+export function doseMessage(
+  t: TreatmentInfo & {
+    doseNumber: number;
+    totalDoses: number;
+    at: Date;
+    notes?: string | null;
+  },
+): AppNotification {
   const time = formatTime(t.at, appTimezone());
   return {
     title: `💊 Medicamento de ${t.pet.name}`,
-    body: [`${t.medicineName} — ${t.dosage}`, `Toma ${t.doseNumber} de ${t.totalDoses} · ${time}`, t.notes]
-      .filter(Boolean)
-      .join('\n'),
-    html: [
-      `💊 <b>Hora del medicamento de ${escapeHtml(t.pet.name)}</b>`,
-      `${escapeHtml(t.medicineName)} — ${escapeHtml(t.dosage)}`,
+    body: [
+      `${t.medicineName} — ${t.dosage}`,
       `Toma ${t.doseNumber} de ${t.totalDoses} · ${time}`,
-      t.notes ? `<i>${escapeHtml(t.notes)}</i>` : '',
+      t.notes,
+      'Al dársela, márcala como dada en la app.',
     ]
       .filter(Boolean)
       .join('\n'),
     url: '/tratamientos',
     tag: `toma-${t.id}`,
     ttl: 30 * 60,
+    urgency: 'high',
+  };
+}
+
+/** Aviso a los demás cuando alguien marca una toma como dada. */
+export function doseGivenMessage(
+  t: TreatmentInfo & {
+    doseNumber: number;
+    totalDoses: number;
+    givenAt: Date;
+    givenBy: string;
+  },
+): AppNotification {
+  return {
+    title: `✅ ${t.pet.name} ya tomó su medicamento`,
+    body: `${t.medicineName} — ${t.dosage} · toma ${t.doseNumber} de ${t.totalDoses}\nSe la dio ${t.givenBy} a las ${formatTime(t.givenAt, appTimezone())}.`,
+    url: '/tratamientos',
+    tag: `toma-${t.id}`,
+    ttl: 6 * 3600,
     urgency: 'high',
   };
 }
@@ -108,29 +112,27 @@ export function treatmentFinishedMessage(t: {
   return {
     title: '✅ Tratamiento terminado',
     body: `${t.medicineName} de ${t.pet.name}`,
-    html: `✅ Terminó el tratamiento de <b>${escapeHtml(t.medicineName)}</b> de <b>${escapeHtml(t.pet.name)}</b>.`,
     url: '/tratamientos',
     ttl: 24 * 3600,
   };
 }
 
-export function activeTreatmentsMessage(
-  treatments: Array<{
-    medicineName: string;
-    dosage: string;
-    pet: { name: string };
-    progress: { nextDoseAt: Date | null; dosesElapsed: number; totalDoses: number };
-  }>,
-): string {
-  if (!treatments.length) return '💊 No hay tratamientos activos.';
-  const tz = appTimezone();
-  return [
-    '💊 <b>Tratamientos activos</b>',
-    ...treatments.map((t) => {
-      const next = t.progress.nextDoseAt
-        ? `próxima toma ${formatDateTime(t.progress.nextDoseAt, tz)}`
-        : 'sin tomas pendientes';
-      return `• <b>${escapeHtml(t.pet.name)}</b>: ${escapeHtml(t.medicineName)} ${escapeHtml(t.dosage)} — ${next} (${t.progress.dosesElapsed}/${t.progress.totalDoses})`;
-    }),
-  ].join('\n');
+/** Aviso a los demás cuando alguien registra una vacuna o desparasitación reciente. */
+export function healthGivenMessage(r: {
+  petId: number;
+  type: string;
+  name: string;
+  dateGiven: Date;
+  pet: { name: string };
+  givenBy: string;
+}): AppNotification {
+  const days = daysBetween(toDateOnly(r.dateGiven), todayIn(appTimezone()));
+  const cuando = days <= 0 ? 'hoy' : days === 1 ? 'ayer' : `hace ${days} días`;
+  return {
+    title: `${icon(r.type)} ${r.pet.name} recibió ${r.name}`,
+    body: `${HEALTH_TYPE_LABEL[r.type] ?? 'Registro'} aplicada ${cuando}. La registró ${r.givenBy}.`,
+    url: '/vacunas',
+    tag: `salud-${r.petId}-${r.type}`,
+    ttl: 12 * 3600,
+  };
 }

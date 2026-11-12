@@ -30,7 +30,7 @@ export class HealthRecordsController {
 
   @Post()
   create(@Body() dto: CreateHealthRecordDto, @CurrentUser() user: AuthUser) {
-    return this.service.create(dto, user.id);
+    return this.service.create(dto, user);
   }
 
   @Patch(':id')

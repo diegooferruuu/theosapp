@@ -6,10 +6,10 @@ export interface User {
   username: string;
   role: Role;
   active: boolean;
-  telegramChatId: string | null;
   notificationsEnabled: boolean;
   lastLoginAt: string | null;
   createdAt: string;
+  _count?: { pushSubscriptions: number };
 }
 
 export interface Pet {
@@ -74,6 +74,13 @@ export interface TreatmentProgress {
   endAt: string;
 }
 
+export interface GivenDose {
+  doseNumber: number;
+  givenAt: string;
+  notes: string | null;
+  givenBy: { id: number; name: string } | null;
+}
+
 export interface Treatment {
   id: number;
   petId: number;
@@ -87,10 +94,14 @@ export interface Treatment {
   notes: string | null;
   pet: PetRef;
   progress: TreatmentProgress;
+  givenCount: number;
+  lastGiven: GivenDose | null;
+  /** Toma que toca ahora (o la próxima si aún no llega). */
+  current: { number: number; at: string; canGive: boolean; given: GivenDose | null };
 }
 
 export interface TreatmentSchedule extends Treatment {
-  doses: { number: number; at: string; past: boolean }[];
+  doses: { number: number; at: string; past: boolean; given: GivenDose | null }[];
 }
 
 export interface VetVisit {

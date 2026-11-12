@@ -10,7 +10,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { Role } from '../generated/prisma/enums.js';
-import { Trim, TrimOrNull } from '../common/dto.js';
+import { Trim } from '../common/dto.js';
 
 const lower = () =>
   Transform(({ value }) =>
@@ -40,12 +40,6 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
-
-  @IsOptional()
-  @TrimOrNull()
-  @IsString()
-  @MaxLength(32)
-  telegramChatId?: string | null;
 }
 
 export class UpdateUserDto {
@@ -78,12 +72,6 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   notificationsEnabled?: boolean;
-
-  @IsOptional()
-  @TrimOrNull()
-  @IsString()
-  @MaxLength(32)
-  telegramChatId?: string | null;
 }
 
 export class UpdateProfileDto {

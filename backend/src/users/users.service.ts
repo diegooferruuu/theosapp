@@ -6,7 +6,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'node:crypto';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuthUser } from '../common/decorators.js';
@@ -23,10 +22,10 @@ export const USER_SELECT = {
   username: true,
   role: true,
   active: true,
-  telegramChatId: true,
   notificationsEnabled: true,
   lastLoginAt: true,
   createdAt: true,
+  _count: { select: { pushSubscriptions: true } },
 } satisfies Prisma.UserSelect;
 
 const hash = (password: string) => bcrypt.hash(password, 10);
@@ -59,7 +58,6 @@ export class UsersService {
           username: dto.username,
           passwordHash: await hash(dto.password),
           role: dto.role ?? 'USER',
-          telegramChatId: dto.telegramChatId ?? null,
         },
         select: USER_SELECT,
       });
@@ -103,7 +101,6 @@ export class UsersService {
           role: dto.role,
           active: dto.active,
           notificationsEnabled: dto.notificationsEnabled,
-          telegramChatId: dto.telegramChatId,
           passwordHash: dto.password ? await hash(dto.password) : undefined,
           tokenVersion: invalidateSessions ? { increment: 1 } : undefined,
         },
@@ -167,26 +164,6 @@ export class UsersService {
         tokenVersion: { increment: 1 },
       },
       select: { id: true, tokenVersion: true, role: true },
-    });
-  }
-
-  async createTelegramLinkCode(id: number) {
-    const code = randomBytes(9).toString('base64url');
-    await this.prisma.user.update({
-      where: { id },
-      data: {
-        telegramLinkCode: code,
-        telegramLinkExpiresAt: new Date(Date.now() + 15 * 60_000),
-      },
-    });
-    return code;
-  }
-
-  unlinkTelegram(id: number) {
-    return this.prisma.user.update({
-      where: { id },
-      data: { telegramChatId: null, telegramLinkCode: null },
-      select: USER_SELECT,
     });
   }
 

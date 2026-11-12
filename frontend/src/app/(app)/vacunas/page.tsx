@@ -108,7 +108,7 @@ export default function VacunasPage() {
     <>
       <PageHeader
         title="Vacunas y desparasitación"
-        description="Avisos por Telegram 1 semana antes, 1 día antes y el mismo día."
+        description="Te avisa 1 semana antes, 1 día antes y el mismo día."
         action={
           <Button onClick={openNew}>
             <PlusIcon /> Registrar
@@ -167,7 +167,10 @@ export default function VacunasPage() {
                 </p>
                 <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:max-w-md">
                   <dt className="text-muted">Aplicada</dt>
-                  <dd>{formatDate(r.dateGiven)}</dd>
+                  <dd>
+                    {formatDate(r.dateGiven)}
+                    {r.createdBy && <span className="text-muted"> · {r.createdBy.name}</span>}
+                  </dd>
                   <dt className="text-muted">Próxima</dt>
                   <dd className="font-medium">{formatDate(r.nextDueDate)}</dd>
                 </dl>

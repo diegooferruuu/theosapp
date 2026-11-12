@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
+import { DoseStatus } from "@/components/dose-status";
 import { PetFilter, PetSelect } from "@/components/pet-filter";
 import { ProgressBar } from "@/components/treatment-progress";
 import {
@@ -103,7 +104,7 @@ export default function TratamientosPage() {
     <>
       <PageHeader
         title="Tratamientos"
-        description="Calcula cada toma y avisa por Telegram a la hora indicada."
+        description="Avisa en cada toma y, al marcarla como dada, avisa a los demás para no repetirla."
         action={
           <Button onClick={openNew}>
             <PlusIcon /> Nuevo tratamiento
@@ -158,20 +159,8 @@ export default function TratamientosPage() {
               <dt className="text-muted">Fin</dt>
               <dd>{formatDateTime(t.progress.endAt)}</dd>
             </dl>
-            <ProgressBar progress={t.progress} />
-            {t.status === "ACTIVE" && (
-              <p className="rounded-xl bg-primary-soft px-3 py-2 text-sm text-primary-strong">
-                {t.progress.nextDoseAt ? (
-                  <>
-                    Toma {t.progress.nextDoseNumber}:{" "}
-                    <span className="font-semibold">{formatDateTime(t.progress.nextDoseAt)}</span>
-                    {!t.notifyDoses && " · sin aviso"}
-                  </>
-                ) : (
-                  "Todas las tomas completadas"
-                )}
-              </p>
-            )}
+            <ProgressBar value={t.givenCount} total={t.progress.totalDoses} />
+            <DoseStatus treatment={t} onChange={() => mutate()} />
             {t.notes && <p className="whitespace-pre-line text-sm text-muted">{t.notes}</p>}
             <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2">
               <Button size="sm" variant="secondary" onClick={() => setScheduleId(t.id)}>
@@ -317,7 +306,7 @@ function TreatmentForm({
             />
           )}
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Frecuencia">
             {(id) => (
               <Select
@@ -372,7 +361,7 @@ function TreatmentForm({
           </p>
         )}
         <Checkbox
-          label="Avisar por Telegram en cada toma"
+          label="Avisar en cada toma"
           checked={f.notifyDoses}
           onChange={(v) => set("notifyDoses", v)}
         />
@@ -411,8 +400,15 @@ function ScheduleModal({ id, onClose }: { id: number; onClose: () => void }) {
       {data && (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-muted">
-            {data.dosage} cada {data.frequencyHours} h · {data.progress.totalDoses} tomas
+            {data.dosage} cada {data.frequencyHours} h · {data.givenCount} de {data.progress.totalDoses} tomas dadas
           </p>
+          <div className="flex flex-wrap gap-3 text-xs text-muted">
+            <span>
+              <span className="text-ok">✓</span> dada
+            </span>
+            <span className="line-through">tachada</span> <span>sin registrar</span>
+            <span className="font-semibold text-primary-strong">resaltada: la actual</span>
+          </div>
           {days.map(([day, doses]) => (
             <div key={day}>
               <p className="mb-2 text-sm font-medium">{day}</p>
@@ -422,15 +418,22 @@ function ScheduleModal({ id, onClose }: { id: number; onClose: () => void }) {
                     key={d.number}
                     className={cx(
                       "rounded-lg border px-2.5 py-1 text-sm tabular-nums",
-                      d.past
-                        ? "border-line bg-surface-2 text-muted line-through decoration-muted/50"
-                        : d.number === data.progress.nextDoseNumber
+                      d.given
+                        ? "border-ok/30 bg-ok-soft text-ok"
+                        : d.number === data.current.number
                           ? "border-primary bg-primary-soft font-semibold text-primary-strong"
-                          : "border-line",
+                          : d.past
+                            ? "border-line bg-surface-2 text-muted line-through decoration-muted/50"
+                            : "border-line",
                     )}
-                    title={`Toma ${d.number}`}
+                    title={
+                      d.given
+                        ? `Toma ${d.number}: la dio ${d.given.givenBy?.name ?? "alguien"} a las ${formatTime(d.given.givenAt)}`
+                        : `Toma ${d.number}`
+                    }
                   >
-                    #{d.number} · {formatTime(d.at)}
+                    {d.given ? "✓ " : ""}#{d.number} · {formatTime(d.at)}
+                    {d.given?.givenBy && <span className="ml-1 text-xs opacity-80">({d.given.givenBy.name})</span>}
                   </span>
                 ))}
               </div>

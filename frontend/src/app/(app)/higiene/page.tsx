@@ -81,7 +81,7 @@ export default function HigienePage() {
     <>
       <PageHeader
         title="Higiene y estética"
-        description="Aviso por Telegram 3 días antes del próximo turno."
+        description="Te avisa 3 días antes del próximo turno."
         action={
           <Button onClick={() => openNew()}>
             <PlusIcon /> Registrar

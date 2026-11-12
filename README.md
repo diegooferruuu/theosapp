@@ -1,21 +1,21 @@
 # Theo’s App 🐾
 
-PWA de uso familiar para gestionar la salud y los cuidados de las mascotas de la casa, con recordatorios por Telegram.
+PWA de uso familiar para gestionar la salud y los cuidados de Theo, con notificaciones push en el teléfono.
 
 **Fase 1 (implementada):** módulo veterinario + usuarios.
 
-| Módulo | Qué hace | Alertas por Telegram |
+| Módulo | Qué hace | Notificaciones |
 |---|---|---|
-| Vacunas y desparasitación | Tipo, producto, fecha de aplicación, próxima fecha, notas. Botón *Renovar* que mantiene el intervalo. | 1 semana antes, 1 día antes, el mismo día (y un aviso si quedó vencida) |
-| Tratamientos | Medicamento, dosis, inicio, duración, frecuencia, estado. Calcula cada toma. | En el horario de cada toma (si el tratamiento está activo) y al finalizar |
+| Vacunas y desparasitación | Tipo, producto, fecha de aplicación, próxima fecha, notas y quién la registró. Botón *Renovar* que mantiene el intervalo. | 1 semana antes, 1 día antes, el mismo día (y un aviso si quedó vencida). Al registrar una aplicada hoy o ayer, avisa al resto |
+| Tratamientos | Medicamento, dosis, inicio, duración, frecuencia, estado. Calcula cada toma y permite marcarla como dada. | En el horario de cada toma, al finalizar, y a los demás cuando alguien marca una toma como dada |
 | Higiene y estética | Baño, corte de pelo, uñas, limpieza dental; próximo turno. | 3 días antes |
 | Visitas y peso | Visitas al veterinario (motivo, diagnóstico, peso) y gráfico de peso. | — |
-| Usuarios | Login, superadmin inicial, alta/edición/baja de usuarios, perfil propio, vinculación con Telegram. | — |
+| Usuarios | Login, superadmin inicial, alta/edición/baja de usuarios y perfil propio. | — |
 
 ## Estructura
 
 ```
-backend/    NestJS 12 + Prisma 7 (PostgreSQL), cron jobs y bot de Telegram
+backend/    NestJS 12 + Prisma 7 (PostgreSQL), cron jobs y notificaciones push
 frontend/   Next.js 16 (App Router) + Tailwind 4, PWA
 nginx/      Proxy: /api → backend, resto → frontend
 docker-compose.yml
@@ -25,12 +25,12 @@ docker-compose.yml
 
 - Al arrancar, si no existe ningún superadmin, el backend crea uno con `SUPERADMIN_USERNAME` / `SUPERADMIN_PASSWORD` (por defecto `diego`). Cambia la contraseña desde **Mi perfil** tras el primer acceso.
 - **Superadmin:** todo lo anterior + gestionar usuarios (crear, editar, desactivar, eliminar, cambiar rol), eliminar mascotas y forzar la revisión de alertas.
-- **Usuario:** ver y registrar todo lo del módulo veterinario, editar su perfil y vincular su Telegram.
+- **Usuario:** ver y registrar todo lo del módulo veterinario, editar su perfil y activar sus notificaciones.
 - La sesión es un JWT en cookie `httpOnly` (30 días por defecto). Cambiar la contraseña, desactivar un usuario o cambiarle el rol cierra sus sesiones.
 
 ## Notificaciones push (PWA)
 
-Cada persona las activa en **Mi perfil → Notificaciones en este dispositivo**. Llegan los mismos avisos que por Telegram (recordatorios diarios, cada toma de medicamento y fin de tratamiento), aunque la app esté cerrada. Al tocar una notificación se abre la sección correspondiente.
+Cada persona las activa en **Mi perfil → Notificaciones en este dispositivo**. Llegan aunque la app esté cerrada. Al tocar una notificación se abre la sección correspondiente.
 
 - Requieren HTTPS.
 - **iPhone (iOS 16.4+):** primero hay que instalar la app (*Compartir → Añadir a pantalla de inicio*) y activarlas desde ahí.
@@ -38,13 +38,14 @@ Cada persona las activa en **Mi perfil → Notificaciones en este dispositivo**.
 - Las claves VAPID se generan solas la primera vez y se guardan en la base (`app_settings`). Si se prefiere, se pueden fijar con `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`.
 - Los dispositivos que desinstalan la app o revocan el permiso se eliminan solos.
 
-## Bot de Telegram
+### Tomas dadas: evitar dosis dobles
 
-1. Crea un bot con [@BotFather](https://t.me/BotFather) y copia el token en `TELEGRAM_BOT_TOKEN`.
-2. Cada persona entra a **Mi perfil → Vincular Telegram**: se abre el bot, toca *Iniciar* y queda vinculada.
-3. Comandos del bot: `/proximos`, `/tratamientos`, `/id`, `/ayuda` (solo responden a chats vinculados).
+En *Tratamientos*, en el inicio y en la ficha de Theo aparece la toma que toca, con el botón **Marcar como dada**. Se puede marcar desde 1 hora antes de su horario.
 
-Sin token, la app funciona igual y los mensajes se escriben en el log del backend.
+- Al marcarla, los demás reciben "Theo ya tomó su medicamento", con quién se la dio y a qué hora. Esa notificación reemplaza al recordatorio de la toma.
+- Si otra persona intenta marcar la misma toma, la app lo impide e indica quién la dio y cuándo.
+- Si la toma ya está marcada cuando llega su hora, no se envía el recordatorio.
+- Una toma marcada por error la puede deshacer quien la marcó o un superadmin.
 
 **Cómo se envían las alertas.** Cada 15 minutos el backend revisa vencimientos y, a partir de `DAILY_ALERT_HOUR`, envía un único resumen con todo lo pendiente. Cada aviso se registra en `notification_logs`, así que nunca se repite aunque el servidor se reinicie, y si el servidor estuvo apagado a la hora del aviso, se envía en la siguiente revisión. Las tomas de medicamentos se revisan cada minuto. Si una vacuna se *renueva* (nuevo registro del mismo producto), la anterior deja de generar avisos.
 
@@ -94,7 +95,7 @@ git archive --format=tar.gz HEAD | ssh oracle '~/theosapp/deploy.sh'
 
 ```bash
 ./scripts/init-env.sh        # crea .env con secretos aleatorios
-nano .env                    # HTTP_PORT, APP_URL, TELEGRAM_BOT_TOKEN, COOKIE_SECURE…
+nano .env                    # HTTP_PORT, APP_URL, COOKIE_SECURE…
 docker compose up -d --build
 ```
 
@@ -132,11 +133,12 @@ Todas las rutas van bajo `/api` y requieren sesión salvo `POST /auth/login` y `
 | Recurso | Endpoints |
 |---|---|
 | Auth | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` |
-| Perfil | `GET/PATCH /profile`, `POST /profile/password`, `GET/DELETE /profile/telegram`, `POST /profile/telegram/link`, `POST /profile/telegram/test` |
+| Perfil | `GET/PATCH /profile`, `POST /profile/password` |
+| Push | `GET /push/config`, `POST /push/subscribe`, `POST /push/unsubscribe`, `POST /push/test` |
 | Usuarios (superadmin) | `GET/POST /users`, `PATCH/DELETE /users/:id` |
 | Mascotas | `GET/POST /pets`, `GET/PATCH /pets/:id`, `DELETE /pets/:id` (superadmin) |
 | Vacunas/desparasitación | `GET/POST /health-records`, `PATCH/DELETE /health-records/:id` (filtros `petId`, `type`) |
-| Tratamientos | `GET/POST /treatments`, `GET /treatments/:id/schedule`, `PATCH/DELETE /treatments/:id` |
+| Tratamientos | `GET/POST /treatments`, `GET /treatments/:id/schedule`, `PATCH/DELETE /treatments/:id`, `POST /treatments/:id/doses`, `DELETE /treatments/:id/doses/:n` |
 | Higiene | `GET/POST /grooming`, `PATCH/DELETE /grooming/:id` |
 | Visitas | `GET/POST /vet-visits`, `PATCH/DELETE /vet-visits/:id` |
 | Peso | `GET/POST /weights`, `PATCH/DELETE /weights/:id` |

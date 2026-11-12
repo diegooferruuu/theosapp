@@ -47,7 +47,6 @@ export class PushController {
     const delivered = await this.push.sendToUser(user.id, {
       title: 'Theo’s App 🐾',
       body: `¡Hola ${user.name}! Las notificaciones de este dispositivo funcionan.`,
-      html: '',
       url: '/perfil',
       tag: 'test',
       ttl: 600,

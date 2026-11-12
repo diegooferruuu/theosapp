@@ -250,7 +250,7 @@ function VisitForm({
         <Field label="Diagnóstico">
           {(id) => <Textarea id={id} value={f.diagnosis} onChange={(e) => set("diagnosis", e.target.value)} />}
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Veterinario / clínica">
             {(id) => <Input id={id} value={f.vetName} onChange={(e) => set("vetName", e.target.value)} />}
           </Field>

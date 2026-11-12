@@ -17,5 +17,5 @@ sed \
   .env.example > .env
 chmod 600 .env
 
-echo "Listo: .env creado. Revisa APP_URL, COOKIE_SECURE y TELEGRAM_BOT_TOKEN."
+echo "Listo: .env creado. Revisa HTTP_PORT, APP_URL y COOKIE_SECURE."
 echo "La contraseña inicial del superadmin está en SUPERADMIN_PASSWORD dentro de .env."
